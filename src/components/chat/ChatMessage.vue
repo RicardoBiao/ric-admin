@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Download } from 'lucide-vue-next'
 import ChatBubble from './ChatBubble.vue'
 import ChatTextContent from './ChatTextContent.vue'
 import ChatImageContent from './ChatImageContent.vue'
@@ -20,6 +19,7 @@ interface Message {
   fileName?: string
   fileSize?: number
   read?: boolean
+  isStreaming?: boolean
 }
 
 interface Props {
@@ -34,59 +34,58 @@ const showImagePreview = ref(false)
 </script>
 
 <template>
-  <div :class="['flex gap-1 group', message.role === 'user' ? 'flex-row-reverse' : '']">
-    <!-- 消息主体 -->
-    <div :class="['flex flex-col gap-1 max-w-sm', message.role === 'user' ? 'items-end' : 'items-start']">
-      <!-- 时间戳和已读状态行 -->
+  <div class="flex flex-col group w-full">
+    <!-- 顶部时间戳行 -->
+    <div class="flex w-full mb-1" :class="message.role === 'user' ? 'justify-end' : 'justify-start'">
       <ChatTimestamp
         :timestamp="message.timestamp"
         :role="message.role"
         :is-read="message.read"
       />
-      <!-- 消息气泡 -->
-      <ChatBubble :message="message">
-        <!-- 文本消息 -->
-        <ChatTextContent
-          v-if="!message.type || message.type === 'text'"
-          :content="message.content"
-          :role="message.role"
-        />
+    </div>
+    <!-- 头像和气泡并排 -->
+    <div :class="['flex items-start gap-1', message.role === 'user' ? 'flex-row-reverse' : '']">
+      <!-- 头像 -->
+      <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white" :class="message.role === 'user' ? 'bg-gradient-to-br from-green-400 to-green-600' : 'bg-gray-300'">
+        {{ message.avatar || (message.role === 'user' ? '我' : 'AI') }}
+      </div>
+      <!-- 消息气泡主体 -->
+      <div :class="['max-w-sm', message.role === 'user' ? 'items-end' : 'items-start']">
+        <template v-if="message.isStreaming && !message.content">
+          <span class="inline-block w-4 h-4 rounded-full bg-blue-500 animate-pulse align-middle"></span>
+        </template>
+        <template v-else>
+          <ChatBubble :message="message">
+            <!-- 文本消息 -->
+            <template v-if="!message.type || message.type === 'text'">
+              <ChatTextContent
+                :content="message.content"
+                :role="message.role"
+              />
+            </template>
+            <!-- 图片消息 -->
+            <ChatImageContent
+              v-else-if="message.type === 'image'"
+              :file-url="message.fileUrl || ''"
+              :file-name="message.fileName"
+              :caption="message.content"
+              :role="message.role"
+              :is-read="message.read"
+              @preview="showImagePreview = true"
+            />
 
-        <!-- 图片消息 -->
-        <ChatImageContent
-          v-else-if="message.type === 'image'"
-          :file-url="message.fileUrl || ''"
-          :file-name="message.fileName"
-          :caption="message.content"
-          :role="message.role"
-          :is-read="message.read"
-          @preview="showImagePreview = true"
-        />
-
-        <!-- 文件消息 -->
-        <ChatFileContent
-          v-else-if="message.type === 'file'"
-          :file-name="message.fileName"
-          :file-size="message.fileSize"
-          :caption="message.content"
-          :role="message.role"
-          :is-read="message.read"
-        />
-      </ChatBubble>
-
-      
-
-      <!-- 文件下载按钮（仅在文件消息时显示）-->
-      <template v-if="message.type === 'file' && message.fileUrl">
-        <a
-          :href="message.fileUrl"
-          :download="message.fileName"
-          class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100"
-          :title="`下载 ${message.fileName}`"
-        >
-          <Download class="h-4 w-4 text-gray-600" />
-        </a>
-      </template>
+            <!-- 文件消息 -->
+            <ChatFileContent
+              v-else-if="message.type === 'file'"
+              :file-name="message.fileName"
+              :file-size="message.fileSize"
+              :caption="message.content"
+              :role="message.role"
+              :is-read="message.read"
+            />
+          </ChatBubble>
+        </template>
+      </div>
     </div>
 
     <!-- 图片预览模态框 -->

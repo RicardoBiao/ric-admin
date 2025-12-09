@@ -1,4 +1,5 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { getDeepSeekClient, type Message as DeepSeekMessage } from '@/api/deepseek'
 
 interface Conversation {
   id: string
@@ -21,6 +22,7 @@ interface Message {
   fileName?: string
   fileSize?: number
   read?: boolean
+  isStreaming?: boolean
 }
 
 // 模拟数据
@@ -159,6 +161,17 @@ export function useChatService() {
   const messages = ref<Message[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const isSending = ref(false)
+
+  // 构建对话历史用于 DeepSeek
+  const conversationHistory = computed(() => {
+    return messages.value
+      .filter(m => m.conversationId === selectedConversation.value?.id)
+      .map(m => ({
+        role: m.role,
+        content: m.content
+      })) as DeepSeekMessage[]
+  })
 
   const fetchConversations = async () => {
     try {
@@ -208,9 +221,14 @@ export function useChatService() {
   }
 
   const sendMessage = async (conversationId: string, content: string) => {
+    if (!content.trim()) return
+
     try {
       error.value = null
-      const newMessage: Message = {
+      isSending.value = true
+
+      // 添加用户消息
+      const userMessage: Message = {
         id: Date.now().toString(),
         conversationId,
         role: 'user',
@@ -218,38 +236,81 @@ export function useChatService() {
         timestamp: new Date().toISOString(),
         avatar: 'U'
       }
+      messages.value.push(userMessage)
 
-      // 添加用户消息
-      messages.value.push(newMessage)
-
-      // 模拟AI回复
-    //   await new Promise(resolve => setTimeout(resolve, 1000))
-
-      setTimeout(() => {
+      // 创建助手消息占位符（用于流式响应）
+      const assistantMessageId = (Date.now() + 1).toString()
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: assistantMessageId,
         conversationId,
         role: 'assistant',
-        content: '感谢您的消息，我正在处理您的请求...',
+        content: '',
         timestamp: new Date().toISOString(),
-        avatar: 'CS'
+        avatar: 'CS',
+        isStreaming: true
+      }
+      messages.value.push(assistantMessage)
+
+      // 调用 DeepSeek API 获取流式响应
+      try {
+        const client = getDeepSeekClient()
+        const deepseekMessages: DeepSeekMessage[] = [
+          ...conversationHistory.value,
+          { role: 'user', content }
+        ]
+
+        await client.getStreamingResponse(
+          deepseekMessages,
+          (chunk: string) => {
+            // 每个流块到达时更新消息内容
+            const msgIndex = messages.value.findIndex(m => m.id === assistantMessageId)
+            if (msgIndex !== -1) {
+              messages.value[msgIndex].content += chunk
+            }
+          },
+          (fullContent: string) => {
+            // 流式响应完成
+            const msgIndex = messages.value.findIndex(m => m.id === assistantMessageId)
+            if (msgIndex !== -1) {
+              messages.value[msgIndex].isStreaming = false
+              messages.value[msgIndex].content = fullContent
+            }
+          },
+          (error: Error) => {
+            // 处理错误
+            const msgIndex = messages.value.findIndex(m => m.id === assistantMessageId)
+            if (msgIndex !== -1) {
+              messages.value[msgIndex].isStreaming = false
+              messages.value[msgIndex].content = `错误: ${error.message}`
+            }
+            error.value = `发送消息失败: ${error.message}`
+          }
+        )
+      } catch (apiError) {
+        console.error('DeepSeek API error:', apiError)
+        // 如果 DeepSeek 不可用，使用默认回复
+        const msgIndex = messages.value.findIndex(m => m.id === assistantMessageId)
+        if (msgIndex !== -1) {
+          messages.value[msgIndex].isStreaming = false
+          messages.value[msgIndex].content = '感谢您的消息，我正在处理您的请求...'
+        }
+        error.value = '调用 DeepSeek API 失败，请检查配置'
       }
 
-      messages.value.push(assistantMessage)
-    }, 1000)
-
       // 更新会话列表
-    //   const conversation = conversations.value.find(c => c.id === conversationId)
-    //   if (conversation) {
-    //     conversation.lastMessage = content
-    //     conversation.timestamp = new Date().toLocaleTimeString('zh-CN', {
-    //       hour: '2-digit',
-    //       minute: '2-digit'
-    //     })
-    //   }
+      const conversation = conversations.value.find(c => c.id === conversationId)
+      if (conversation) {
+        conversation.lastMessage = content
+        conversation.timestamp = new Date().toLocaleTimeString('zh-CN', {
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      }
     } catch (err) {
       error.value = '发送消息失败'
       console.error(err)
+    } finally {
+      isSending.value = false
     }
   }
 
@@ -307,6 +368,7 @@ export function useChatService() {
     messages,
     loading,
     error,
+    isSending,
     fetchConversations,
     selectConversation,
     loadMessages,

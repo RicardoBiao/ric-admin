@@ -1,10 +1,5 @@
 <template>
-  <div :class="['flex items-end gap-2', message.role === 'user' ? 'flex-row-reverse' : 'flex-row']">
-    <!-- 头像 -->
-    <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white" :class="message.role === 'user' ? 'bg-gradient-to-br from-green-400 to-green-600' : 'bg-gray-300'">
-      {{ message.avatar || (message.role === 'user' ? '我' : 'AI') }}
-    </div>
-
+  <div :class="['flex flex-col']">
     <!-- 消息气泡 -->
     <div
       :class="[

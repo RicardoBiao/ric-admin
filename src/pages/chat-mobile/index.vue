@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 import { ArrowLeft } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import ChatMessage from '@/components/chat/ChatMessage.vue'
@@ -70,12 +70,7 @@ const handleSendMessage = async () => {
     
     messageInput.value = ''
     
-    // 自动滚动到底部
-    nextTick(() => {
-      if (messagesContainer.value) {
-        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-      }
-    })
+    
   } catch (error) {
     console.error('发送消息失败:', error)
   } finally {
@@ -118,6 +113,19 @@ const handleSendFile = async (file: File, content: string) => {
   }
 }
 
+// 自动滚动到底部
+watch(
+  () => messages,
+  () => {
+    nextTick(() => {
+      if (messagesContainer.value) {
+        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+      }
+    })
+  },
+  { deep: true }
+)
+
 onMounted(() => {
   initConversation()
 })
@@ -141,7 +149,7 @@ onMounted(() => {
     <!-- 消息列表 -->
     <div
       ref="messagesContainer"
-      class="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50"
+      class="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50 mb-[72px]"
     >
       <div v-if="loading" class="flex items-center justify-center h-full">
         <div class="text-center">
@@ -149,14 +157,13 @@ onMounted(() => {
           <p class="text-gray-500 text-sm mt-2">加载消息中...</p>
         </div>
       </div>
-
       <template v-else>
         <ChatMessage
           v-for="message in messages"
           :key="message.id"
           :message="message"
+          :data-msg-key="`msg-${message.id}`"
         />
-
         <div v-if="messages.length === 0" class="flex items-center justify-center h-full text-gray-400">
           <p class="text-sm">暂无消息，开始聊天吧</p>
         </div>

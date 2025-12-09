@@ -324,7 +324,7 @@ const getImagePreview = (file: File): string => {
       <div
         v-else
         ref="messagesContainer"
-        class="flex-1 overflow-y-auto p-4 space-y-2"
+        class="overflow-y-auto p-4 space-y-2 h-[calc(100vh-334px)]"
       >
         <div v-if="loading" class="flex items-center justify-center h-full">
           <div class="text-center">
