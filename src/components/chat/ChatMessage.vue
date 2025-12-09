@@ -37,6 +37,12 @@ const showImagePreview = ref(false)
   <div :class="['flex gap-1 group', message.role === 'user' ? 'flex-row-reverse' : '']">
     <!-- 消息主体 -->
     <div :class="['flex flex-col gap-1 max-w-sm', message.role === 'user' ? 'items-end' : 'items-start']">
+      <!-- 时间戳和已读状态行 -->
+      <ChatTimestamp
+        :timestamp="message.timestamp"
+        :role="message.role"
+        :is-read="message.read"
+      />
       <!-- 消息气泡 -->
       <ChatBubble :message="message">
         <!-- 文本消息 -->
@@ -44,7 +50,6 @@ const showImagePreview = ref(false)
           v-if="!message.type || message.type === 'text'"
           :content="message.content"
           :role="message.role"
-          :is-read="message.read"
         />
 
         <!-- 图片消息 -->
@@ -69,12 +74,7 @@ const showImagePreview = ref(false)
         />
       </ChatBubble>
 
-      <!-- 时间戳和已读状态行 -->
-      <ChatTimestamp
-        :timestamp="message.timestamp"
-        :role="message.role"
-        :is-read="message.read"
-      />
+      
 
       <!-- 文件下载按钮（仅在文件消息时显示）-->
       <template v-if="message.type === 'file' && message.fileUrl">

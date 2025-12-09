@@ -3,8 +3,8 @@
     <span class="text-xs opacity-60">{{ formatTime(timestamp) }}</span>
     <!-- 已读状态（两边都显示） -->
     <div class="flex items-center gap-0.5">
-      <CheckCheck v-if="isRead" class="h-3 w-3" :class="role === 'user' ? 'text-blue-500' : 'text-gray-400'" />
-      <Check v-else class="h-3 w-3" :class="role === 'user' ? 'text-gray-400' : 'text-gray-300'" />
+      <CheckCheck v-if="isRead" class="h-5 w-5" :class="role === 'user' ? 'text-blue-500' : 'text-gray-400'" />
+      <Check v-else class="h-5 w-5" :class="role === 'user' ? 'text-gray-400' : 'text-gray-300'" />
     </div>
   </div>
 </template>

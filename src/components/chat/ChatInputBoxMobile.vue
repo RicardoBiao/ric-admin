@@ -84,36 +84,17 @@
 
     <!-- 输入区域 -->
     <div class="bg-white border-t border-gray-200">
-      <div class="flex items-end gap-3 p-3">
-        <!-- 左侧：表情按钮 -->
-        <DropdownMenu v-model:open="showEmojiPicker">
-          <DropdownMenuTrigger as-child>
-            <Button
-              :disabled="disabled"
-              variant="ghost"
-              size="sm"
-              class="h-9 w-9 p-0 hover:bg-gray-100 flex-shrink-0 rounded-full flex items-center justify-center"
-              title="表情"
-            >
-              <Smile class="h-5 w-5 text-gray-600" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent class="w-72 p-2" align="start" side="top">
-            <div class="grid grid-cols-8 gap-1">
-              <button
-                v-for="(emoji, idx) in emojis"
-                :key="idx"
-                @click="insertEmoji(emoji)"
-                class="text-xl hover:bg-gray-100 rounded p-1 transition-colors"
-              >
-                {{ emoji }}
-              </button>
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <div class="flex items-center gap-2 p-3">
+        <!-- 左侧：mic按钮 -->
+        <div
+          @click="showActionMenu = !showActionMenu"
+          class="h-12 w-8 p-0 hover:bg-gray-100 flex-shrink-0 rounded-full flex items-center justify-center"
+        >
+          <Mic class="h-8 w-8 text-blue-500" />
+        </div>
 
         <!-- 中间：输入框（iPhone 风格） -->
-        <div class="flex-1 bg-gray-100 rounded-2xl px-4 py-2.5 flex items-center">
+        <div class="flex-1 bg-gray-100 rounded-xl px-4 py-2.5 flex items-center">
           <textarea
             ref="textareaRef"
             :value="modelValue"
@@ -128,17 +109,36 @@
           />
         </div>
 
+        
+        <!-- 右侧：表情按钮 -->
+        <DropdownMenu v-model:open="showEmojiPicker">
+          <DropdownMenuTrigger as-child>
+            <div
+              class="w-8 p-0 hover:bg-gray-100 flex-shrink-0 rounded-full"
+            >
+              <Smile class="h-8 w-8 text-blue-500" />
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent class="w-72 p-2" align="start" side="top">
+            <div class="grid grid-cols-8 gap-1">
+              <button
+                v-for="(emoji, idx) in emojis"
+                :key="idx"
+                @click="insertEmoji(emoji)"
+                class="text-xl hover:bg-gray-100 rounded p-1 transition-colors"
+              >
+                {{ emoji }}
+              </button>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <!-- 右侧：加号按钮 -->
-        <Button
+        <div
           @click="showActionMenu = !showActionMenu"
-          :disabled="disabled"
-          variant="ghost"
-          size="sm"
-          class="h-9 w-9 p-0 hover:bg-gray-100 flex-shrink-0 rounded-full flex items-center justify-center"
-          title="添加"
+          class="h-12 w-8 p-0 hover:bg-gray-100 flex-shrink-0 rounded-full flex items-center justify-center"
         >
-          <Plus class="h-6 w-6 text-blue-500" />
-        </Button>
+          <CirclePlus class="h-8 w-8 text-blue-500" />
+        </div>
       </div>
 
       <!-- 待发送图片预览 -->
@@ -189,8 +189,7 @@
 
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
-import { Paperclip, Image as ImageIcon, Smile, Plus, Camera, X } from 'lucide-vue-next'
-import { Button } from '@/components/ui/button'
+import { Paperclip, Image as ImageIcon, Smile, CirclePlus, Camera, X, Mic } from 'lucide-vue-next'
 import {
   DropdownMenu,
   DropdownMenuContent,
