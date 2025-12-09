@@ -1,5 +1,42 @@
-# Vue 3 + TypeScript + Vite
+# Ric-Admin 管理后台系统
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+一个现代化的 Vue 3 管理后台系统，提供丰富的 UI 组件和实用的业务功能。
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+## 🚀 技术栈
+
+- **前端框架**: Vue 3 + TypeScript
+- **构建工具**: Vite
+- **UI 组件库**: Radix Vue + 自定义组件
+- **样式**: Tailwind CSS
+- **路由**: Vue Router 4
+- **状态管理**: VueUse
+- **表格组件**: TanStack Table (Vue Table)
+- **图标**: Lucide Vue
+- **文件处理**: Mammoth (Word文档处理), FileSaver
+
+## 📦 主要功能
+
+### 1. 客户管理
+- 客户列表展示与搜索
+- 客户类型和状态筛选
+- 批量删除操作
+- 响应式表格设计
+
+### 2. 文档处理
+- Word 文档上传与预览
+- 可视化区域选择与标注
+- 动态字段编辑
+- DOCX 模板导出功能
+
+### 3. 示例演示
+- 朋友圈内容展示卡片
+- 可复制文本功能
+- 响应式网格布局
+
+### 4. 数据表格
+- 高级表格功能（排序、筛选、分页）
+- 列显示控制
+- 行选择和展开
+- 固定列支持
+
+## 🏗️ 项目结构
