@@ -14,6 +14,7 @@
     "@types/file-saver": "^2.0.7",
     "@types/html-to-docx": "^1.8.0",
     "@vueuse/core": "^13.5.0",
+    "ant-design-x-vue": "^1.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "docxtemplater": "^3.67.3",
@@ -31,7 +32,8 @@
     "tailwindcss": "^4.1.11",
     "vue": "^3.5.17",
     "vue-router": "4",
-    "vue-sonner": "^2.0.2"
+    "vue-sonner": "^2.0.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/mockjs": "^1.0.10",
@@ -40,6 +42,7 @@
     "@vue/tsconfig": "^0.7.0",
     "mockjs": "^1.1.0",
     "typescript": "~5.8.3",
+    "unplugin-vue-components": "^30.0.0",
     "vite": "^7.0.4",
     "vite-plugin-mock": "^3.0.2",
     "vue-tsc": "^2.2.12"
