@@ -183,31 +183,33 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 
-const props = defineProps({
-  customers: {
-    type: Array,
-    default: () => [],
-  },
-  filteredCustomers: {
-    type: Array,
-    default: () => [],
-  },
-  enableSelection: {
-    type: Boolean,
-    default: false,
-  }
-})
+interface Customer {
+    id: string | number
+  name: string
+  type: string
+  company: string
+  contact: string
+  phone: string
+  status: string
+  createTime: string
+}
+
+const props = defineProps<{
+  customers?: Customer[]
+  filteredCustomers: Customer[]
+  enableSelection?: boolean
+}>()
 
 const emit = defineEmits(['selection-change'])
 
 // 选择相关状态
-const selectedItems = ref(new Set())
+const selectedItems = ref<Set<string | number>>(new Set())
 const isAllSelected = computed(() => {
   return paginatedCustomers.value.length > 0 && 
-         paginatedCustomers.value.every((item: any) => selectedItems.value.has(item.id))
+         paginatedCustomers.value.every((item: Customer) => selectedItems.value.has(item.id))
 })
 const isIndeterminate = computed(() => {
-  const selectedCount = paginatedCustomers.value.filter((item: any) => selectedItems.value.has(item.id)).length
+  const selectedCount = paginatedCustomers.value.filter((item: Customer) => selectedItems.value.has(item.id)).length
   return selectedCount > 0 && selectedCount < paginatedCustomers.value.length
 })
 
@@ -215,12 +217,12 @@ const isIndeterminate = computed(() => {
 const toggleSelectAll = () => {
   if (isAllSelected.value) {
     // 取消选择当前页所有项
-    paginatedCustomers.value.forEach((item: any) => {
+    paginatedCustomers.value.forEach((item: Customer) => {
       selectedItems.value.delete(item.id)
     })
   } else {
     // 选择当前页所有项
-    paginatedCustomers.value.forEach((item: any) => {
+    paginatedCustomers.value.forEach((item: Customer) => {
       selectedItems.value.add(item.id)
     })
   }
@@ -229,7 +231,7 @@ const toggleSelectAll = () => {
 }
 
 // 切换单个项选择
-const toggleItemSelection = (itemId: string) => {
+const toggleItemSelection = (itemId: string | number) => {
   if (selectedItems.value.has(itemId)) {
     selectedItems.value.delete(itemId)
   } else {
@@ -245,10 +247,10 @@ const pageSize = ref(10)
 
 
 // 分页数据
-const paginatedCustomers = computed(() => {
+const paginatedCustomers = computed<Customer[]>(() => {
   const start = (currentPage.value - 1) * pageSize.value
   const end = start + pageSize.value
-  return props.filteredCustomers.slice(start, end)
+  return (props.filteredCustomers || []).slice(start, end)
 })
 
 const getStatusBadge = (status: string) => {

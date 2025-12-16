@@ -18,7 +18,7 @@ interface Props {
   isRead?: boolean
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 
 const formatTime = (timestamp: string) => {
   try {

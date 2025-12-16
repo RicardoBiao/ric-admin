@@ -224,7 +224,7 @@ async function readExcelFile(file: File): Promise<FileInfo> {
         workbook.SheetNames.forEach(sheetName => {
           sheets.push(sheetName)
           const worksheet = workbook.Sheets[sheetName]
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown as any[][]
           
           if (jsonData.length > 0) {
             // 第一行作为表头
@@ -236,7 +236,7 @@ async function readExcelFile(file: File): Promise<FileInfo> {
             for (let i = 1; i < jsonData.length; i++) {
               const row: any = {}
               headers.forEach((header, index) => {
-                row[header] = jsonData[i][index] ?? ''
+                row[header] = (jsonData[i] && jsonData[i][index] !== undefined) ? jsonData[i][index] : ''
               })
               rows.push(row)
             }

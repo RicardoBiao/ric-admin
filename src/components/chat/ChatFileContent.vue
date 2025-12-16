@@ -29,7 +29,7 @@ interface Props {
   isRead?: boolean
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 
 const formatFileSize = (bytes?: number) => {
   if (!bytes) return '0 B'

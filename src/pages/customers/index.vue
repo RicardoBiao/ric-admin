@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { Search, Plus, Filter } from 'lucide-vue-next'
+import { Search, Filter } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import TheLayout from '@/components/ric-ui/TheLayout.vue'
@@ -44,8 +44,9 @@ const handleSearch = async () => {
 }
 
 // 处理类型筛选
-const handleTypeFilter = async (type?: string) => {
-  selectedType.value = type || ''
+const handleTypeFilter = async (value: any) => {
+  const type = (value ?? '') as string
+  selectedType.value = type
   await filterCustomers({
     type: type === 'all' ? '' : type,
     status: selectedStatus.value === 'all' ? '' : selectedStatus.value
@@ -53,7 +54,8 @@ const handleTypeFilter = async (type?: string) => {
 }
 
 // 处理状态筛选
-const handleStatusFilter = async (status: string) => {
+const handleStatusFilter = async (value: any) => {
+  const status = (value ?? '') as string
   selectedStatus.value = status
   await filterCustomers({
     type: selectedType.value === 'all' ? '' : selectedType.value,

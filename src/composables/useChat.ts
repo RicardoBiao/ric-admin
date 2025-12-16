@@ -276,14 +276,14 @@ export function useChatService() {
               messages.value[msgIndex].content = fullContent
             }
           },
-          (error: Error) => {
+          (err: Error) => {
             // 处理错误
             const msgIndex = messages.value.findIndex(m => m.id === assistantMessageId)
             if (msgIndex !== -1) {
               messages.value[msgIndex].isStreaming = false
-              messages.value[msgIndex].content = `错误: ${error.message}`
+              messages.value[msgIndex].content = `错误: ${err.message}`
             }
-            error.value = `发送消息失败: ${error.message}`
+            error.value = `发送消息失败: ${err.message}`
           }
         )
       } catch (apiError) {

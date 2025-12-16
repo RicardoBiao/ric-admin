@@ -46,11 +46,11 @@ const showImagePreview = ref(false)
     <!-- 头像和气泡并排 -->
     <div :class="['flex items-start gap-1', message.role === 'user' ? 'flex-row-reverse' : '']">
       <!-- 头像 -->
-      <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white" :class="message.role === 'user' ? 'bg-gradient-to-br from-green-400 to-green-600' : 'bg-gray-300'">
+      <!-- <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white" :class="message.role === 'user' ? 'bg-gradient-to-br from-green-400 to-green-600' : 'bg-gray-300'">
         {{ message.avatar || (message.role === 'user' ? '我' : 'AI') }}
-      </div>
+      </div> -->
       <!-- 消息气泡主体 -->
-      <div :class="['max-w-sm', message.role === 'user' ? 'items-end' : 'items-start']">
+      <div :class="['max-w-2xl', message.role === 'user' ? 'items-end' : 'items-start']">
         <template v-if="message.isStreaming && !message.content">
           <span class="inline-block w-4 h-4 rounded-full bg-blue-500 animate-pulse align-middle"></span>
         </template>

@@ -219,7 +219,7 @@ const getImagePreview = (file: File): string => {
 <template>
   <div class="flex h-full bg-gray-50 rounded-lg shadow-sm overflow-hidden">
     <!-- 左侧会话列表 -->
-    <div class="w-72 border-r border-gray-200 bg-white flex flex-col">
+    <div class="h-[100vh] w-72 border-r border-gray-200 bg-white flex flex-col">
       <!-- 顶部操作栏 -->
       <div class="p-4 border-b border-gray-100 space-y-3">
         <div class="flex items-center gap-2">
@@ -324,7 +324,7 @@ const getImagePreview = (file: File): string => {
       <div
         v-else
         ref="messagesContainer"
-        class="overflow-y-auto p-4 space-y-2 h-[calc(100vh-334px)]"
+        class="overflow-y-auto p-4 space-y-2 h-[calc(100vh-240px)]"
       >
         <div v-if="loading" class="flex items-center justify-center h-full">
           <div class="text-center">

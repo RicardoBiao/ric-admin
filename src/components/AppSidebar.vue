@@ -62,16 +62,20 @@ const data = {
       isActive: true,
       items: [
         {
-          title: 'History',
-          url: '/home',
+          title: 'Json Compare',
+          url: '/json-compare',
         },
         {
-          title: 'Starred',
-          url: '#',
+          title: 'Excel Merge',
+          url: '/excel-merge',
         },
         {
-          title: 'Settings',
-          url: '#',
+          title: 'Chat',
+          url: '/chat',
+        },
+        {
+          title: 'Chat Mobile',
+          url: '/chat-mobile',
         },
       ],
     },

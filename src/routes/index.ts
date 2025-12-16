@@ -33,6 +33,18 @@ const routes = [
   {
     path: '/chat-mobile',
     component: () => import('@/pages/chat-mobile/index.vue'),
+  },
+  {
+    path: '/json-compare',
+    component: () => import('@/pages/json-compare/index.vue'),
+  },
+  {
+    path: '/screenshot-bg',
+    component: () => import('@/pages/screenshot-bg/index.vue'),
+  },
+  {
+    path: '/gif-maker',
+    component: () => import('@/pages/gif-maker/index.vue'),
   }
 ]
 

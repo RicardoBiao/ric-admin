@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import TheLayout from '@/components/ric-ui/TheLayout.vue'
 import ChatLayout from '@/components/chat/ChatLayout.vue'
 import { useChatService } from '@/composables/useChat'
 
@@ -83,7 +82,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <TheLayout>
+  <!-- <TheLayout> -->
     <ChatLayout
       :conversations="conversations"
       :selected-conversation="selectedConversation"
@@ -96,5 +95,5 @@ onMounted(() => {
       @send-message="handleSendMessage"
       @send-file="handleSendFile"
     />
-  </TheLayout>
+  <!-- </TheLayout> -->
 </template>

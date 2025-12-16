@@ -25,11 +25,8 @@
 import RicCard from '@/components/ric-ui/RicCard.vue'
 import TheLayout from '@/components/ric-ui/TheLayout.vue'
 import {
-  ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
-import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import pyqText from '@/core/utils/pyq'
 </script>
