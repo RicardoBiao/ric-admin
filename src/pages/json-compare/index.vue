@@ -113,29 +113,16 @@ const globalSummary = computed(() => {
         const leftMap = toPathMap(leftParsed)
         const rightMap = toPathMap(rightParsed)
         const allKeys = new Set([...Object.keys(leftMap), ...Object.keys(rightMap)])
-        const matchedKeys = Array.from(allKeys).filter(fullKey => {
-          return filteredKeys.value.some(filterKey => {
-            if (fullKey === filterKey) return true
-            if (fullKey.endsWith('.' + filterKey)) return true
-            if (fullKey.includes('.' + filterKey)) return true
-            const parts = fullKey.split('.')
-            if (parts[parts.length - 1] === filterKey) return true
-            return false
-          })
-        })
+        const matchedKeys = Array.from(allKeys).filter(fullKey => 
+          filteredKeys.value.some(filterKey => matchesFilterKey(fullKey, filterKey))
+        )
         
         // 如果没有匹配的键，检查过滤的键是否在两边都不存在
         if (matchedKeys.length === 0) {
           let allFilteredKeysNotExist = true
           filteredKeys.value.forEach(filterKey => {
-            const leftHasKey = Object.keys(leftMap).some(k => {
-              const parts = k.split('.')
-              return parts[parts.length - 1] === filterKey || k.includes('.' + filterKey) || k === filterKey
-            })
-            const rightHasKey = Object.keys(rightMap).some(k => {
-              const parts = k.split('.')
-              return parts[parts.length - 1] === filterKey || k.includes('.' + filterKey) || k === filterKey
-            })
+            const leftHasKey = Object.keys(leftMap).some(k => matchesFilterKey(k, filterKey))
+            const rightHasKey = Object.keys(rightMap).some(k => matchesFilterKey(k, filterKey))
             
             if (leftHasKey && !rightHasKey) {
               leftOnly += 1
@@ -191,6 +178,16 @@ const globalSummary = computed(() => {
   return { totalRows, same, diffValue, leftOnly, rightOnly, matchPercent }
 })
 
+// 键名匹配辅助函数
+function matchesFilterKey(fullKey: string, filterKey: string): boolean {
+  if (fullKey === filterKey) return true
+  if (fullKey.endsWith('.' + filterKey)) return true
+  if (fullKey.includes('.' + filterKey)) return true
+  const parts = fullKey.split('.')
+  if (parts[parts.length - 1] === filterKey) return true
+  return false
+}
+
 function toPathMap(input: any, parentKey = ''): Record<string, any> {
   const map: Record<string, any> = {}
 
@@ -230,44 +227,18 @@ function computeDiff(leftParsed: any, rightParsed: any): DiffRow[] {
   if (leftParsed === null && rightParsed === null) return []
   if (leftParsed === undefined && rightParsed === undefined) return []
   
-  console.log('computeDiff 输入:', { leftParsed, rightParsed })
-  
   const leftMap = toPathMap(leftParsed || {})
   const rightMap = toPathMap(rightParsed || {})
-  
-  console.log('toPathMap 结果:', { 
-    leftMapKeys: Object.keys(leftMap).length, 
-    rightMapKeys: Object.keys(rightMap).length,
-    leftMapSample: Object.keys(leftMap).slice(0, 5),
-    rightMapSample: Object.keys(rightMap).slice(0, 5)
-  })
   let keys = new Set([...Object.keys(leftMap), ...Object.keys(rightMap)])
-  
-  console.log('过滤前总键数:', keys.size, '过滤条件:', filteredKeys.value)
   
   // 如果有键名过滤，只比对指定的键
   if (filteredKeys.value.length > 0) {
     const allKeys = Array.from(keys)
-    console.log('所有键的前10个:', allKeys.slice(0, 10))
-    const matchedKeys = allKeys.filter(fullKey => {
-      return filteredKeys.value.some(filterKey => {
-        // 完全匹配
-        if (fullKey === filterKey) return true
-        // 路径结尾匹配（支持嵌套对象）
-        if (fullKey.endsWith('.' + filterKey)) return true
-        // 数组路径匹配（例如 [0].购方名称 匹配 购方名称）
-        if (fullKey.includes('.' + filterKey)) return true
-        // 数组索引后直接匹配（例如 [0].购方名称 中的 购方名称）
-        const parts = fullKey.split('.')
-        if (parts[parts.length - 1] === filterKey) return true
-        return false
-      })
-    })
-    console.log('过滤后匹配到的键:', matchedKeys)
+    const matchedKeys = allKeys.filter(fullKey => 
+      filteredKeys.value.some(filterKey => matchesFilterKey(fullKey, filterKey))
+    )
     keys = new Set(matchedKeys)
   }
-  
-  console.log('最终用于对比的键数:', keys.size)
   
   const result: DiffRow[] = []
   
@@ -275,14 +246,8 @@ function computeDiff(leftParsed: any, rightParsed: any): DiffRow[] {
   if (filteredKeys.value.length > 0 && keys.size === 0) {
     // 对每个过滤的键进行检查
     filteredKeys.value.forEach(filterKey => {
-      const leftHasKey = Object.keys(leftMap).some(k => {
-        const parts = k.split('.')
-        return parts[parts.length - 1] === filterKey || k.includes('.' + filterKey) || k === filterKey
-      })
-      const rightHasKey = Object.keys(rightMap).some(k => {
-        const parts = k.split('.')
-        return parts[parts.length - 1] === filterKey || k.includes('.' + filterKey) || k === filterKey
-      })
+      const leftHasKey = Object.keys(leftMap).some(k => matchesFilterKey(k, filterKey))
+      const rightHasKey = Object.keys(rightMap).some(k => matchesFilterKey(k, filterKey))
       
       if (!leftHasKey && !rightHasKey) {
         // 两边都没有 → 一致
@@ -373,57 +338,34 @@ function safeParse(value: unknown, side: 'left' | 'right') {
   if (value === null || value === undefined || value === '') return null
   if (typeof value !== 'string') return value as Record<string, any>
   
-  console.log(`[${side}] 原始值类型:`, typeof value, '长度:', value.length)
-  console.log(`[${side}] 原始内容前100字符:`, value.substring(0, 100))
-  console.log(`[${side}] 原始内容后100字符:`, value.substring(value.length - 100))
-  
-  // 策略1: 只 trim 首尾空白
   let cleanValue = value.trim()
-  console.log(`[${side}] Trim后长度:`, cleanValue.length)
   
   // 移除 UTF-8 BOM
   if (cleanValue.charCodeAt(0) === 0xFEFF) {
     cleanValue = cleanValue.slice(1)
-    console.log(`[${side}] 移除BOM后长度:`, cleanValue.length)
   }
   
   // 移除零宽字符
   cleanValue = cleanValue.replace(/[\u200B-\u200D\uFEFF]/g, '')
   
-  try {
-    console.log(`[${side}] 尝试解析...`)
-    const parsed = JSON.parse(cleanValue)
-    console.log(`[${side}] ✅ 解析成功`)
-    return parsed as Record<string, any>
-  } catch (e1: any) {
-    console.warn(`[${side}] ❌ 策略1失败:`, e1.message)
-    
-    // 策略2: 移除所有换行和回车
+  // 尝试多种清理策略
+  const strategies = [
+    { name: '基础', clean: (s: string) => s },
+    { name: '移除换行', clean: (s: string) => s.replace(/[\r\n]/g, '') },
+    { name: '移除空白', clean: (s: string) => s.replace(/\s+/g, '') }
+  ]
+  
+  for (const strategy of strategies) {
     try {
-      const cleanValue2 = cleanValue.replace(/[\r\n]/g, '')
-      console.log(`[${side}] 策略2: 移除换行后长度:`, cleanValue2.length)
-      const parsed = JSON.parse(cleanValue2)
-      console.log(`[${side}] ✅ 策略2成功`)
+      const parsed = JSON.parse(strategy.clean(cleanValue))
       return parsed as Record<string, any>
-    } catch (e2: any) {
-      console.warn(`[${side}] ❌ 策略2失败:`, e2.message)
-      
-      // 策略3: 移除所有空白字符
-      try {
-        const cleanValue3 = cleanValue.replace(/\s+/g, '')
-        console.log(`[${side}] 策略3: 移除所有空白后长度:`, cleanValue3.length)
-        const parsed = JSON.parse(cleanValue3)
-        console.log(`[${side}] ✅ 策略3成功`)
-        return parsed as Record<string, any>
-      } catch (e3: any) {
-        console.error(`[${side}] ❌ 所有策略都失败`)
-        parseErrors[side] = `JSON 解析失败: ${e1.message}`
-        console.error(`[${side}] 完整错误:`, e1)
-        console.error(`[${side}] 清理后的内容:`, cleanValue)
-        return null
-      }
+    } catch (e) {
+      continue
     }
   }
+  
+  parseErrors[side] = 'JSON 解析失败'
+  return null
 }
 
 function safeParseSilent(value: unknown) {
