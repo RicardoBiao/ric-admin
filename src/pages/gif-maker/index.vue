@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 // @ts-ignore
 import GIF from 'gif.js'
 
@@ -17,6 +17,49 @@ const isGenerating = ref(false)
 const generatedGifUrl = ref('')
 const draggedIndex = ref<number | null>(null)
 const previewImage = ref<ImageItem | null>(null)
+
+// 页面加载时检查是否有截图数据
+onMounted(() => {
+  // 优先从 window 对象读取（避免 sessionStorage 容量限制）
+  const windowScreenshots = (window as any).__gifScreenshots
+  if (windowScreenshots && Array.isArray(windowScreenshots)) {
+    windowScreenshots.forEach((url: string, index: number) => {
+      const id = `screenshot_${Date.now()}_${index}`
+      images.value.push({
+        id,
+        file: new File([], `screenshot-${index + 1}.png`, { type: 'image/png' }),
+        url,
+        name: `screenshot-${index + 1}.png`,
+        order: images.value.length
+      })
+    })
+    // 清除全局变量
+    delete (window as any).__gifScreenshots
+    return
+  }
+
+  // 向后兼容：尝试从 sessionStorage 读取
+  const screenshotsData = sessionStorage.getItem('gifScreenshots')
+  if (screenshotsData) {
+    try {
+      const screenshots = JSON.parse(screenshotsData)
+      screenshots.forEach((url: string, index: number) => {
+        const id = `screenshot_${Date.now()}_${index}`
+        images.value.push({
+          id,
+          file: new File([], `screenshot-${index + 1}.png`, { type: 'image/png' }),
+          url,
+          name: `screenshot-${index + 1}.png`,
+          order: images.value.length
+        })
+      })
+      // 清除 sessionStorage
+      sessionStorage.removeItem('gifScreenshots')
+    } catch (error) {
+      console.error('加载截图数据失败:', error)
+    }
+  }
+})
 
 const handleFileUpload = (event: Event) => {
   const target = event.target as HTMLInputElement
