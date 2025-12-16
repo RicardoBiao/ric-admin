@@ -130,6 +130,30 @@ const clearAll = () => {
   generatedGifUrl.value = ''
 }
 
+const sortByFileName = () => {
+  images.value.sort((a, b) => {
+    // 提取文件名中的数字进行排序
+    const getNumber = (name: string) => {
+      // 匹配文件名中的数字部分，例如 "r-1.png" -> 1, "img-10.jpg" -> 10
+      const match = name.match(/(\d+)/)
+      return match ? parseInt(match[1], 10) : 0
+    }
+    
+    const numA = getNumber(a.name)
+    const numB = getNumber(b.name)
+    
+    // 如果都有数字，按数字排序
+    if (numA !== numB) {
+      return numA - numB
+    }
+    
+    // 否则按字母排序
+    return a.name.localeCompare(b.name)
+  })
+  
+  reorderImages()
+}
+
 const openPreview = (img: ImageItem) => {
   previewImage.value = img
 }
@@ -141,7 +165,7 @@ const closePreview = () => {
 
 <template>
   <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
-    <div class="max-w-7xl mx-auto">
+    <div class="w-full">
       <!-- 标题 -->
       <div class="text-center mb-6">
         <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 mb-3 shadow-lg">
@@ -153,9 +177,9 @@ const closePreview = () => {
         <p class="text-gray-600">上传多张图片，拖拽排序，一键生成动态 GIF</p>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
         <!-- 左侧：图片列表 -->
-        <div class="lg:col-span-2 space-y-4">
+        <div class="lg:col-span-3 space-y-4">
           <!-- 上传区域 -->
           <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 p-5 border border-gray-100">
             <label class="cursor-pointer group block">
@@ -186,12 +210,23 @@ const closePreview = () => {
           <div v-if="images.length > 0" class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 p-5 border border-gray-100">
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-lg font-semibold text-gray-800">图片列表（{{ images.length }} 张）</h2>
-              <button 
-                @click="clearAll"
-                class="px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors font-medium"
-              >
-                清空全部
-              </button>
+              <div class="flex gap-2">
+                <button 
+                  @click="sortByFileName"
+                  class="px-4 py-2 text-sm bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
+                  </svg>
+                  按名称排序
+                </button>
+                <button 
+                  @click="clearAll"
+                  class="px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors font-medium"
+                >
+                  清空全部
+                </button>
+              </div>
             </div>
             
             <div class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -230,7 +265,7 @@ const closePreview = () => {
               </div>
             </div>
             
-            <p class="text-xs text-gray-500 mt-4 text-center">💡 提示：拖拽图片可以调整顺序</p>
+            <p class="text-xs text-gray-500 mt-4 text-center">💡 提示：拖拽图片可以调整顺序，双击可以预览图片</p>
           </div>
 
           <!-- 空状态 -->
@@ -245,7 +280,7 @@ const closePreview = () => {
         </div>
 
         <!-- 右侧：设置和预览 -->
-        <div class="space-y-4">
+        <div class="lg:col-span-2 space-y-4">
           <!-- 设置 -->
           <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 p-5 border border-gray-100">
             <h2 class="text-lg font-semibold text-gray-800 mb-4">GIF 设置</h2>

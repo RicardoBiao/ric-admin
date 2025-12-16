@@ -6,6 +6,10 @@ const routes = [
     component: () => import('@/pages/home/index.vue'),
   },
   {
+    path: '/toolbox',
+    component: () => import('@/pages/toolbox/index.vue'),
+  },
+  {
     path: '/customers',
     component: () => import('@/pages/customers/index.vue'),
   },
