@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 // @ts-ignore
 import GIF from 'gif.js'
+import JSZip from 'jszip'
 
 interface ImageItem {
   id: string
@@ -204,6 +205,52 @@ const openPreview = (img: ImageItem) => {
 const closePreview = () => {
   previewImage.value = null
 }
+
+// 一键下载所有图片
+const downloadAllImages = async () => {
+  if (images.value.length === 0) {
+    alert('没有图片可下载')
+    return
+  }
+
+  // 如果只有一张图片，直接下载
+  if (images.value.length === 1) {
+    const link = document.createElement('a')
+    link.href = images.value[0].url
+    link.download = images.value[0].name
+    link.click()
+    return
+  }
+
+  // 多张图片时，打包成zip下载
+  try {
+    const zip = new JSZip()
+    const folder = zip.folder('images')
+    
+    // 将所有图片添加到zip
+    for (let i = 0; i < images.value.length; i++) {
+      const img = images.value[i]
+      // 将base64转换为blob
+      const base64Data = img.url.split(',')[1]
+      folder?.file(img.name, base64Data, { base64: true })
+    }
+    
+    // 生成zip文件
+    const blob = await zip.generateAsync({ type: 'blob' })
+    
+    // 下载zip
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `images_${Date.now()}.zip`
+    link.click()
+    
+    // 释放内存
+    URL.revokeObjectURL(link.href)
+  } catch (error) {
+    console.error('打包失败:', error)
+    alert('打包下载失败，请重试')
+  }
+}
 </script>
 
 <template>
@@ -262,6 +309,15 @@ const closePreview = () => {
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
                   </svg>
                   按名称排序
+                </button>
+                <button 
+                  @click="downloadAllImages"
+                  class="px-4 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                  </svg>
+                  下载全部
                 </button>
                 <button 
                   @click="clearAll"
