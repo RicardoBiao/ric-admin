@@ -50,20 +50,20 @@ const clearMobileImage = () => {
 </script>
 
 <template>
-  <div class="h-screen bg-black flex" style="padding: 16px;">
+  <div class="h-screen bg-black flex" style="padding: 8px;">
     <!-- 主内容区域 -->
-    <div class="grid grid-cols-1 lg:grid-cols-[80%_1fr] gap-6 items-stretch flex-1">
+    <div class="grid grid-cols-1 lg:grid-cols-[80%_1fr] gap-3 items-stretch flex-1">
         <!-- 左侧：PC 端 -->
-        <div class="flex flex-col gap-2 h-full">
+        <div class="flex flex-col gap-1.5 h-full">
           <!-- 边框颜色和宽度控制 -->
-          <div class="bg-gray-900 rounded-lg p-3 space-y-2 flex-shrink-0">
-            <div class="flex items-center gap-4">
-              <label class="text-sm font-medium text-gray-300 min-w-20">边框颜色</label>
+          <div class="bg-gray-900 rounded-lg p-1.5 space-y-1.5 flex-shrink-0">
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-medium text-gray-300 min-w-16">边框颜色</label>
               <div class="flex items-center gap-2">
                 <input 
                   v-model="pcUseDefaultColor"
                   type="checkbox" 
-                  class="w-4 h-4 rounded cursor-pointer accent-green-500"
+                  class="w-3 h-3 rounded cursor-pointer accent-green-500"
                 />
                 <span class="text-xs text-gray-400">默认色</span>
               </div>
@@ -71,26 +71,26 @@ const clearMobileImage = () => {
                 v-model="pcBorderColor" 
                 type="color" 
                 :disabled="pcUseDefaultColor"
-                class="w-16 h-10 rounded cursor-pointer border-2 border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="w-10 h-7 rounded cursor-pointer border-2 border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <input 
                 v-model="pcBorderColor" 
                 type="text" 
                 :disabled="pcUseDefaultColor"
-                class="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="flex-1 px-2 py-1 bg-gray-800 border border-gray-700 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <button 
                 v-if="pcImage"
                 @click="clearPcImage"
-                class="w-10 h-10 bg-red-500 hover:bg-red-600 rounded-lg flex items-center justify-center text-white transition-colors shadow-lg"
+                class="w-7 h-7 bg-red-500 hover:bg-red-600 rounded-lg flex items-center justify-center text-white transition-colors shadow-lg"
               >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
               </button>
             </div>
-            <div class="flex items-center gap-4">
-              <label class="text-sm font-medium text-gray-300 min-w-20">边框宽度</label>
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-medium text-gray-300 min-w-16">边框宽度</label>
               <input 
                 v-model.number="pcBorderWidth" 
                 type="range" 
@@ -98,13 +98,13 @@ const clearMobileImage = () => {
                 max="20" 
                 class="flex-1 accent-blue-500"
               />
-              <span class="text-white text-sm min-w-12">{{ pcBorderWidth }}px</span>
+              <span class="text-white text-xs min-w-10">{{ pcBorderWidth }}px</span>
             </div>
           </div>
 
           <!-- 上传区域 -->
           <div class="relative bg-gray-900 rounded-lg overflow-hidden flex-1 flex items-center justify-center">
-            <div v-if="!pcImage" class="text-center p-8">
+            <div v-if="!pcImage" class="text-center p-6">
               <label class="cursor-pointer group">
                 <div class="flex flex-col items-center gap-4">
                   <div class="w-20 h-20 rounded-full bg-gray-800 flex items-center justify-center group-hover:bg-gray-700 transition-colors">
@@ -126,7 +126,7 @@ const clearMobileImage = () => {
               </label>
             </div>
             
-            <div v-else class="relative w-full h-full p-6 flex items-center justify-center">
+            <div v-else class="relative w-full h-full p-3 flex items-center justify-center">
               <div 
                 class="relative w-full h-full"
                 :style="{
@@ -146,16 +146,16 @@ const clearMobileImage = () => {
         </div>
 
         <!-- 右侧：移动端 -->
-        <div class="flex flex-col gap-2 h-full">
+        <div class="flex flex-col gap-1.5 h-full">
           <!-- 边框颜色和宽度控制 -->
-          <div class="bg-gray-900 rounded-lg p-3 space-y-2 flex-shrink-0">
-            <div class="flex items-center gap-4">
-              <label class="text-sm font-medium text-gray-300 min-w-20">边框颜色</label>
+          <div class="bg-gray-900 rounded-lg p-1.5 space-y-1.5 flex-shrink-0">
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-medium text-gray-300 min-w-16">边框颜色</label>
               <div class="flex items-center gap-2">
                 <input 
                   v-model="mobileUseDefaultColor"
                   type="checkbox" 
-                  class="w-4 h-4 rounded cursor-pointer accent-green-500"
+                  class="w-3 h-3 rounded cursor-pointer accent-green-500"
                 />
                 <span class="text-xs text-gray-400">默认色</span>
               </div>
@@ -163,26 +163,26 @@ const clearMobileImage = () => {
                 v-model="mobileBorderColor" 
                 type="color" 
                 :disabled="mobileUseDefaultColor"
-                class="w-16 h-10 rounded cursor-pointer border-2 border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="w-10 h-7 rounded cursor-pointer border-2 border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <input 
                 v-model="mobileBorderColor" 
                 type="text" 
                 :disabled="mobileUseDefaultColor"
-                class="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="flex-1 px-2 py-1 bg-gray-800 border border-gray-700 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <button 
                 v-if="mobileImage"
                 @click="clearMobileImage"
-                class="w-10 h-10 bg-red-500 hover:bg-red-600 rounded-lg flex items-center justify-center text-white transition-colors shadow-lg"
+                class="w-7 h-7 bg-red-500 hover:bg-red-600 rounded-lg flex items-center justify-center text-white transition-colors shadow-lg"
               >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
               </button>
             </div>
-            <div class="flex items-center gap-4">
-              <label class="text-sm font-medium text-gray-300 min-w-20">边框宽度</label>
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-medium text-gray-300 min-w-16">边框宽度</label>
               <input 
                 v-model.number="mobileBorderWidth" 
                 type="range" 
@@ -190,13 +190,13 @@ const clearMobileImage = () => {
                 max="20" 
                 class="flex-1 accent-purple-500"
               />
-              <span class="text-white text-sm min-w-12">{{ mobileBorderWidth }}px</span>
+              <span class="text-white text-xs min-w-10">{{ mobileBorderWidth }}px</span>
             </div>
           </div>
 
           <!-- 上传区域 -->
           <div class="relative bg-gray-900 rounded-lg overflow-hidden flex-1 flex items-center justify-center">
-            <div v-if="!mobileImage" class="text-center p-8">
+            <div v-if="!mobileImage" class="text-center p-6">
               <label class="cursor-pointer group">
                 <div class="flex flex-col items-center gap-4">
                   <div class="w-20 h-20 rounded-full bg-gray-800 flex items-center justify-center group-hover:bg-gray-700 transition-colors">
@@ -218,7 +218,7 @@ const clearMobileImage = () => {
               </label>
             </div>
             
-            <div v-else class="relative w-full h-full p-6 flex items-center justify-center">
+            <div v-else class="relative w-full h-full p-3 flex items-center justify-center">
               <div 
                 class="relative w-full h-full"
                 :style="{
