@@ -34,11 +34,13 @@ const currentRow = computed(() => rows.value[rowIndex.value] || null)
 const currentJson = computed(() => {
   // 根据当前模式决定使用哪种输入源
   if (inputMode.value === 'direct') {
-    const leftParsed = safeParse(directJsonLeft.value, 'left')
-    const rightParsed = safeParse(directJsonRight.value, 'right')
+    const leftClean = directJsonLeft.value.trim()
+    const rightClean = directJsonRight.value.trim()
+    const leftParsed = safeParse(leftClean, 'left')
+    const rightParsed = safeParse(rightClean, 'right')
     return {
-      leftRaw: directJsonLeft.value,
-      rightRaw: directJsonRight.value,
+      leftRaw: leftClean,
+      rightRaw: rightClean,
       leftParsed,
       rightParsed,
       isDirectInput: true,
@@ -46,8 +48,8 @@ const currentJson = computed(() => {
   }
   
   // Excel 模式
-  const leftRaw = currentRow.value && colLeft.value ? currentRow.value[colLeft.value] ?? '' : ''
-  const rightRaw = currentRow.value && colRight.value ? currentRow.value[colRight.value] ?? '' : ''
+  const leftRaw = currentRow.value && colLeft.value ? (currentRow.value[colLeft.value] ?? '').toString().trim() : ''
+  const rightRaw = currentRow.value && colRight.value ? (currentRow.value[colRight.value] ?? '').toString().trim() : ''
 
   const leftParsed = safeParse(leftRaw, 'left')
   const rightParsed = safeParse(rightRaw, 'right')
@@ -99,6 +101,12 @@ const globalSummary = computed(() => {
     const leftParsed = safeParseSilent(row[colLeft.value])
     const rightParsed = safeParseSilent(row[colRight.value])
 
+    // 如果两边都为空，判断为一致
+    if (!leftParsed && !rightParsed) {
+      same += 1
+      return
+    }
+
     if (leftParsed && rightParsed) {
       // 如果有键过滤，只比较过滤后的键
       if (filteredKeys.value.length > 0) {
@@ -108,12 +116,42 @@ const globalSummary = computed(() => {
         const matchedKeys = Array.from(allKeys).filter(fullKey => {
           return filteredKeys.value.some(filterKey => {
             if (fullKey === filterKey) return true
-            if (fullKey.endsWith('.' + filterKey) || fullKey.endsWith('[' + filterKey + ']')) return true
+            if (fullKey.endsWith('.' + filterKey)) return true
+            if (fullKey.includes('.' + filterKey)) return true
+            const parts = fullKey.split('.')
+            if (parts[parts.length - 1] === filterKey) return true
             return false
           })
         })
         
+        // 如果没有匹配的键，检查过滤的键是否在两边都不存在
         if (matchedKeys.length === 0) {
+          let allFilteredKeysNotExist = true
+          filteredKeys.value.forEach(filterKey => {
+            const leftHasKey = Object.keys(leftMap).some(k => {
+              const parts = k.split('.')
+              return parts[parts.length - 1] === filterKey || k.includes('.' + filterKey) || k === filterKey
+            })
+            const rightHasKey = Object.keys(rightMap).some(k => {
+              const parts = k.split('.')
+              return parts[parts.length - 1] === filterKey || k.includes('.' + filterKey) || k === filterKey
+            })
+            
+            if (leftHasKey && !rightHasKey) {
+              leftOnly += 1
+              allFilteredKeysNotExist = false
+            } else if (!leftHasKey && rightHasKey) {
+              rightOnly += 1
+              allFilteredKeysNotExist = false
+            } else if (leftHasKey || rightHasKey) {
+              allFilteredKeysNotExist = false
+            }
+          })
+          
+          // 如果所有过滤的键在两边都不存在，记为一致
+          if (allFilteredKeysNotExist) {
+            same += 1
+          }
           return
         }
         
@@ -188,27 +226,91 @@ function toPathMap(input: any, parentKey = ''): Record<string, any> {
 }
 
 function computeDiff(leftParsed: any, rightParsed: any): DiffRow[] {
-  if (!leftParsed || !rightParsed) return []
-  const leftMap = toPathMap(leftParsed)
-  const rightMap = toPathMap(rightParsed)
+  // 只有当两边都是 null/undefined 时才返回空数组
+  if (leftParsed === null && rightParsed === null) return []
+  if (leftParsed === undefined && rightParsed === undefined) return []
+  
+  console.log('computeDiff 输入:', { leftParsed, rightParsed })
+  
+  const leftMap = toPathMap(leftParsed || {})
+  const rightMap = toPathMap(rightParsed || {})
+  
+  console.log('toPathMap 结果:', { 
+    leftMapKeys: Object.keys(leftMap).length, 
+    rightMapKeys: Object.keys(rightMap).length,
+    leftMapSample: Object.keys(leftMap).slice(0, 5),
+    rightMapSample: Object.keys(rightMap).slice(0, 5)
+  })
   let keys = new Set([...Object.keys(leftMap), ...Object.keys(rightMap)])
+  
+  console.log('过滤前总键数:', keys.size, '过滤条件:', filteredKeys.value)
   
   // 如果有键名过滤，只比对指定的键
   if (filteredKeys.value.length > 0) {
     const allKeys = Array.from(keys)
+    console.log('所有键的前10个:', allKeys.slice(0, 10))
     const matchedKeys = allKeys.filter(fullKey => {
       return filteredKeys.value.some(filterKey => {
         // 完全匹配
         if (fullKey === filterKey) return true
         // 路径结尾匹配（支持嵌套对象）
-        if (fullKey.endsWith('.' + filterKey) || fullKey.endsWith('[' + filterKey + ']')) return true
+        if (fullKey.endsWith('.' + filterKey)) return true
+        // 数组路径匹配（例如 [0].购方名称 匹配 购方名称）
+        if (fullKey.includes('.' + filterKey)) return true
+        // 数组索引后直接匹配（例如 [0].购方名称 中的 购方名称）
+        const parts = fullKey.split('.')
+        if (parts[parts.length - 1] === filterKey) return true
         return false
       })
     })
+    console.log('过滤后匹配到的键:', matchedKeys)
     keys = new Set(matchedKeys)
   }
   
+  console.log('最终用于对比的键数:', keys.size)
+  
   const result: DiffRow[] = []
+  
+  // 如果启用了过滤但没有匹配的键，检查过滤的键是否在两边都不存在
+  if (filteredKeys.value.length > 0 && keys.size === 0) {
+    // 对每个过滤的键进行检查
+    filteredKeys.value.forEach(filterKey => {
+      const leftHasKey = Object.keys(leftMap).some(k => {
+        const parts = k.split('.')
+        return parts[parts.length - 1] === filterKey || k.includes('.' + filterKey) || k === filterKey
+      })
+      const rightHasKey = Object.keys(rightMap).some(k => {
+        const parts = k.split('.')
+        return parts[parts.length - 1] === filterKey || k.includes('.' + filterKey) || k === filterKey
+      })
+      
+      if (!leftHasKey && !rightHasKey) {
+        // 两边都没有 → 一致
+        result.push({
+          key: filterKey,
+          left: '(不存在)',
+          right: '(不存在)',
+          status: 'same',
+        })
+      } else if (!leftHasKey) {
+        // 只有右边有 → 仅列 B
+        result.push({
+          key: filterKey,
+          left: '(不存在)',
+          right: '(存在)',
+          status: 'right-only',
+        })
+      } else if (!rightHasKey) {
+        // 只有左边有 → 仅列 A
+        result.push({
+          key: filterKey,
+          left: '(存在)',
+          right: '(不存在)',
+          status: 'left-only',
+        })
+      }
+    })
+  }
 
   keys.forEach(key => {
     const l = leftMap[key]
@@ -270,12 +372,57 @@ function safeParse(value: unknown, side: 'left' | 'right') {
   parseErrors[side] = ''
   if (value === null || value === undefined || value === '') return null
   if (typeof value !== 'string') return value as Record<string, any>
+  
+  console.log(`[${side}] 原始值类型:`, typeof value, '长度:', value.length)
+  console.log(`[${side}] 原始内容前100字符:`, value.substring(0, 100))
+  console.log(`[${side}] 原始内容后100字符:`, value.substring(value.length - 100))
+  
+  // 策略1: 只 trim 首尾空白
+  let cleanValue = value.trim()
+  console.log(`[${side}] Trim后长度:`, cleanValue.length)
+  
+  // 移除 UTF-8 BOM
+  if (cleanValue.charCodeAt(0) === 0xFEFF) {
+    cleanValue = cleanValue.slice(1)
+    console.log(`[${side}] 移除BOM后长度:`, cleanValue.length)
+  }
+  
+  // 移除零宽字符
+  cleanValue = cleanValue.replace(/[\u200B-\u200D\uFEFF]/g, '')
+  
   try {
-    const parsed = JSON.parse(value)
+    console.log(`[${side}] 尝试解析...`)
+    const parsed = JSON.parse(cleanValue)
+    console.log(`[${side}] ✅ 解析成功`)
     return parsed as Record<string, any>
-  } catch (e: any) {
-    parseErrors[side] = 'JSON 解析失败'
-    return null
+  } catch (e1: any) {
+    console.warn(`[${side}] ❌ 策略1失败:`, e1.message)
+    
+    // 策略2: 移除所有换行和回车
+    try {
+      const cleanValue2 = cleanValue.replace(/[\r\n]/g, '')
+      console.log(`[${side}] 策略2: 移除换行后长度:`, cleanValue2.length)
+      const parsed = JSON.parse(cleanValue2)
+      console.log(`[${side}] ✅ 策略2成功`)
+      return parsed as Record<string, any>
+    } catch (e2: any) {
+      console.warn(`[${side}] ❌ 策略2失败:`, e2.message)
+      
+      // 策略3: 移除所有空白字符
+      try {
+        const cleanValue3 = cleanValue.replace(/\s+/g, '')
+        console.log(`[${side}] 策略3: 移除所有空白后长度:`, cleanValue3.length)
+        const parsed = JSON.parse(cleanValue3)
+        console.log(`[${side}] ✅ 策略3成功`)
+        return parsed as Record<string, any>
+      } catch (e3: any) {
+        console.error(`[${side}] ❌ 所有策略都失败`)
+        parseErrors[side] = `JSON 解析失败: ${e1.message}`
+        console.error(`[${side}] 完整错误:`, e1)
+        console.error(`[${side}] 清理后的内容:`, cleanValue)
+        return null
+      }
+    }
   }
 }
 
@@ -947,7 +1094,40 @@ watch(rows, () => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
           </div>
-          <p class="text-gray-600">无法生成对比，请检查 JSON 是否可解析</p>
+          <p v-if="filteredKeys.length > 0 && !parseErrors.left && !parseErrors.right" class="text-gray-600 mb-2">
+            没有找到匹配的键名
+          </p>
+          <p v-else-if="parseErrors.left || parseErrors.right" class="text-gray-600 mb-4">
+            无法生成对比，请检查 JSON 是否可解析
+          </p>
+          <p v-else class="text-gray-600 mb-4">
+            暂无对比数据
+          </p>
+          <p v-if="filteredKeys.length > 0" class="text-sm text-blue-600 mb-4">
+            当前过滤条件：{{ filteredKeys.join(', ') }}
+            <button @click="filteredKeys = []" class="ml-2 text-xs underline hover:text-blue-800">清除过滤</button>
+          </p>
+          <div v-if="(!currentJson.isDirectInput && currentRow) && (parseErrors.left || parseErrors.right)" class="max-w-4xl mx-auto">
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
+              <div class="text-left">
+                <p class="text-sm font-semibold text-red-800 mb-2">列 A 内容：</p>
+                <pre class="text-xs text-red-700 bg-white rounded p-3 overflow-x-auto border border-red-200">{{ currentJson.leftRaw || '(空)' }}</pre>
+              </div>
+              <div class="text-left">
+                <p class="text-sm font-semibold text-red-800 mb-2">列 B 内容：</p>
+                <pre class="text-xs text-red-700 bg-white rounded p-3 overflow-x-auto border border-red-200">{{ currentJson.rightRaw || '(空)' }}</pre>
+              </div>
+              <div v-if="parseErrors.left || parseErrors.right" class="text-left">
+                <p class="text-sm font-semibold text-red-800 mb-2">解析错误：</p>
+                <div v-if="parseErrors.left" class="text-xs text-red-700 bg-white rounded p-3 mb-2 border border-red-200">
+                  <strong>列 A：</strong>{{ parseErrors.left }}
+                </div>
+                <div v-if="parseErrors.right" class="text-xs text-red-700 bg-white rounded p-3 border border-red-200">
+                  <strong>列 B：</strong>{{ parseErrors.right }}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <div v-else class="overflow-x-auto rounded-xl border border-gray-200">
           <table class="min-w-full text-sm">
