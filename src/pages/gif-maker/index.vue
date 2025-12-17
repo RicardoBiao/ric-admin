@@ -14,10 +14,18 @@ interface ImageItem {
 
 const images = ref<ImageItem[]>([])
 const delay = ref(500) // 默认每帧延迟 500ms
+const scale = ref(100) // 图片缩放比例，50-100%
+const sampleInterval = ref(10) // 采样间隔，值越大文件越小但质量下降
 const isGenerating = ref(false)
 const generatedGifUrl = ref('')
+const gifFileSize = ref(0) // GIF文件大小（字节）
 const draggedIndex = ref<number | null>(null)
 const previewImage = ref<ImageItem | null>(null)
+
+// 重命名相关
+const showRenameDialog = ref(false)
+const renamePrefix = ref('image')
+const renameStartNumber = ref(1)
 
 // 页面加载时检查是否有截图数据
 onMounted(() => {
@@ -131,7 +139,9 @@ const generateGif = async () => {
   try {
     const gif = new GIF({
       workers: 2,
-      quality: 10,
+      quality: 10, // 固定使用默认质量
+      width: undefined, // 将在添加第一帧时设置
+      height: undefined,
       workerScript: new URL('gif.js/dist/gif.worker.js', import.meta.url).href
     })
 
@@ -144,11 +154,24 @@ const generateGif = async () => {
         img.src = imgItem.url
       })
       
-      gif.addFrame(img, { delay: delay.value })
+      // 根据缩放比例创建 canvas
+      const canvas = document.createElement('canvas')
+      const scaleRatio = scale.value / 100
+      canvas.width = Math.floor(img.width * scaleRatio)
+      canvas.height = Math.floor(img.height * scaleRatio)
+      
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      
+      gif.addFrame(canvas, { 
+        delay: delay.value,
+        copy: true // 确保每帧都是独立的
+      })
     }
 
     gif.on('finished', (blob: Blob) => {
       generatedGifUrl.value = URL.createObjectURL(blob)
+      gifFileSize.value = blob.size
       isGenerating.value = false
     })
 
@@ -172,6 +195,7 @@ const downloadGif = () => {
 const clearAll = () => {
   images.value = []
   generatedGifUrl.value = ''
+  gifFileSize.value = 0
 }
 
 const sortByFileName = () => {
@@ -204,6 +228,43 @@ const openPreview = (img: ImageItem) => {
 
 const closePreview = () => {
   previewImage.value = null
+}
+
+// 格式化文件大小
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
+}
+
+// 打开重命名弹窗
+const openRenameDialog = () => {
+  showRenameDialog.value = true
+}
+
+// 执行重命名
+const applyRename = () => {
+  if (!renamePrefix.value.trim()) {
+    alert('请输入文件名前缀')
+    return
+  }
+  
+  images.value.forEach((img, index) => {
+    const ext = img.name.substring(img.name.lastIndexOf('.'))
+    const newNumber = renameStartNumber.value + index
+    img.name = `${renamePrefix.value}-${newNumber}${ext}`
+  })
+  
+  showRenameDialog.value = false
+}
+
+// 取消重命名
+const cancelRename = () => {
+  showRenameDialog.value = false
+  renamePrefix.value = 'image'
+  renameStartNumber.value = 1
 }
 
 // 一键下载所有图片
@@ -311,6 +372,15 @@ const downloadAllImages = async () => {
                   按名称排序
                 </button>
                 <button 
+                  @click="openRenameDialog"
+                  class="px-4 py-2 text-sm bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                  </svg>
+                  重命名
+                </button>
+                <button 
                   @click="downloadAllImages"
                   class="px-4 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
                 >
@@ -404,6 +474,26 @@ const downloadAllImages = async () => {
                 </div>
               </div>
 
+              <div>
+                <label class="text-sm font-medium text-gray-700 mb-2 block">图片缩放（最有效）</label>
+                <div class="flex items-center gap-4">
+                  <input 
+                    v-model.number="scale" 
+                    type="range" 
+                    min="25" 
+                    max="100" 
+                    step="5"
+                    class="flex-1 accent-green-500"
+                  />
+                  <span class="text-sm font-semibold text-gray-700 min-w-16">{{ scale }}%</span>
+                </div>
+                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>小尺寸</span>
+                  <span>原始尺寸</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">🔥 重点：缩小图片是减小文件的最好方法</p>
+              </div>
+
               <button
                 @click="generateGif"
                 :disabled="images.length === 0 || isGenerating"
@@ -423,7 +513,12 @@ const downloadAllImages = async () => {
 
           <!-- 预览 -->
           <div v-if="generatedGifUrl" class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 p-5 border border-gray-100">
-            <h2 class="text-lg font-semibold text-gray-800 mb-4">预览效果</h2>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-semibold text-gray-800">预览效果</h2>
+              <span class="text-sm font-medium text-purple-600 bg-purple-50 px-3 py-1 rounded-full">
+                📦 {{ formatFileSize(gifFileSize) }}
+              </span>
+            </div>
             
             <div class="bg-gray-100 rounded-lg overflow-hidden mb-4">
               <img :src="generatedGifUrl" alt="Generated GIF" class="w-full max-h-[600px] object-contain" />
@@ -462,6 +557,67 @@ const downloadAllImages = async () => {
         />
         <div class="mt-4 text-center">
           <p class="text-white text-lg font-medium">{{ previewImage.name }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 重命名弹窗 -->
+    <div 
+      v-if="showRenameDialog" 
+      @click="cancelRename"
+      class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+    >
+      <div 
+        @click.stop
+        class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md transform transition-all"
+      >
+        <h3 class="text-xl font-bold text-gray-800 mb-4">📝 批量重命名</h3>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">文件名前缀</label>
+            <input 
+              v-model="renamePrefix"
+              type="text"
+              placeholder="例如：image"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">起始数字</label>
+            <input 
+              v-model.number="renameStartNumber"
+              type="number"
+              min="0"
+              placeholder="例如：1"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
+            />
+          </div>
+          
+          <div class="bg-gray-50 rounded-lg p-3">
+            <p class="text-sm text-gray-600 mb-1">预览示例：</p>
+            <p class="text-sm font-mono text-gray-800">
+              {{ renamePrefix }}-{{ renameStartNumber }}.png<br>
+              {{ renamePrefix }}-{{ renameStartNumber + 1 }}.png<br>
+              {{ renamePrefix }}-{{ renameStartNumber + 2 }}.png
+            </p>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button
+            @click="cancelRename"
+            class="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors"
+          >
+            取消
+          </button>
+          <button
+            @click="applyRename"
+            class="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors"
+          >
+            确认重命名
+          </button>
         </div>
       </div>
     </div>
