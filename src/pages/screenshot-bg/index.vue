@@ -216,18 +216,11 @@ const captureScreenshot = async () => {
         pcImg.onerror = resolve
       })
       
-      // 计算图片实际显示尺寸（保持比例，尽量铺满，不受边框影响）
-      const maxWidth = pcWidth - pcPadding * 2
-      const maxHeight = pcHeight - pcPadding * 2
-      let imgWidth = pcImg.width
-      let imgHeight = pcImg.height
+      // 图片宽度固定为区域可用宽度的90%，高度按原图比例计算
+      const imgWidth = (pcWidth - pcPadding * 2) * 0.9
+      const imgHeight = (pcImg.height / pcImg.width) * imgWidth
       
-      // 按比例缩放到尽可能大
-      const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight)
-      imgWidth *= ratio
-      imgHeight *= ratio
-      
-      // 居中位置（图片位置固定，不受边框影响）
+      // 居中位置
       const pcX = (pcWidth - imgWidth) / 2
       const pcY = (pcHeight - imgHeight) / 2
       
@@ -271,18 +264,11 @@ const captureScreenshot = async () => {
         mobileImg.onerror = resolve
       })
       
-      // 计算图片实际显示尺寸（尽量铺满，不受边框影响）
-      const maxWidth = mobileWidth - mobilePadding * 2
-      const maxHeight = mobileHeight - mobilePadding * 2
-      let imgWidth = mobileImg.width
-      let imgHeight = mobileImg.height
+      // 图片宽度固定为区域可用宽度的90%，高度按原图比例计算
+      const imgWidth = (mobileWidth - mobilePadding * 2) * 0.9
+      const imgHeight = (mobileImg.height / mobileImg.width) * imgWidth
       
-      // 按比例缩放到尽可能大
-      const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight)
-      imgWidth *= ratio
-      imgHeight *= ratio
-      
-      // 居中位置（图片位置固定，不受边框影响）
+      // 居中位置
       const mX = mobileX + (mobileWidth - imgWidth) / 2
       const mY = (mobileHeight - imgHeight) / 2
       
@@ -562,7 +548,7 @@ const makeGif = () => {
       >
         <div 
           v-if="currentPcImage"
-          style="position: relative; display: inline-block;"
+          style="position: relative; display: inline-block; width: 90%; max-height: 100%;"
           :style="{ 
             padding: `${pcBorderWidth}px`,
             backgroundColor: actualPcBorderColor 
@@ -571,7 +557,7 @@ const makeGif = () => {
           <img 
             :src="currentPcImage.url" 
             :alt="currentPcImage.name"
-            style="max-width: 100%; max-height: 100%; object-fit: contain;"
+            style="width: 100%; height: auto; display: block;"
           />
         </div>
         <div v-else style="color: rgb(107, 114, 128); text-align: center;">
@@ -595,7 +581,7 @@ const makeGif = () => {
       >
         <div 
           v-if="currentMobileImage"
-          style="position: relative; display: inline-block;"
+          style="position: relative; display: inline-block; width: 90%; max-height: 100%;"
           :style="{ 
             padding: `${mobileBorderWidth}px`,
             backgroundColor: actualMobileBorderColor 
@@ -604,7 +590,7 @@ const makeGif = () => {
           <img 
             :src="currentMobileImage.url" 
             :alt="currentMobileImage.name"
-            style="max-width: 100%; max-height: 100%; object-fit: contain;"
+            style="width: 100%; height: auto; display: block;"
           />
         </div>
         <div v-else style="color: rgb(107, 114, 128); text-align: center;">
