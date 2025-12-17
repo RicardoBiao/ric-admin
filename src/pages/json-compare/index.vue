@@ -30,6 +30,7 @@ const showKeyFilterModal = ref(false)
 const inputMode = ref<'excel' | 'direct'>('excel') // 输入模式切换
 
 const currentRow = computed(() => rows.value[rowIndex.value] || null)
+const keySearchQuery = ref('')
 
 const currentJson = computed(() => {
   // 根据当前模式决定使用哪种输入源
@@ -72,6 +73,14 @@ const availableKeys = computed(() => {
   const rightMap = rightParsed ? toPathMap(rightParsed) : {}
   const allKeys = new Set([...Object.keys(leftMap), ...Object.keys(rightMap)])
   return Array.from(allKeys).sort()
+})
+
+const filteredAvailableKeys = computed(() => {
+  if (!keySearchQuery.value.trim()) {
+    return availableKeys.value
+  }
+  const query = keySearchQuery.value.toLowerCase()
+  return availableKeys.value.filter(key => key.toLowerCase().includes(query))
 })
 
 const diffRows = computed<DiffRow[]>(() => computeDiff(currentJson.value.leftParsed, currentJson.value.rightParsed))
@@ -497,10 +506,12 @@ function clearAllKeys() {
 
 function openKeyFilterModal() {
   showKeyFilterModal.value = true
+  keySearchQuery.value = ''
 }
 
 function closeKeyFilterModal() {
   showKeyFilterModal.value = false
+  keySearchQuery.value = ''
 }
 
 watch(keyFilterJson, validateKeyFilter)
@@ -1173,9 +1184,40 @@ watch(rows, () => {
             </div>
           </div>
           
-          <div class="border-2 border-gray-200 rounded-xl p-1 bg-gray-50 max-h-96 overflow-y-auto">
+          <!-- 搜索框 -->
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+            </div>
+            <input
+              v-model="keySearchQuery"
+              type="text"
+              placeholder="搜索键名..."
+              class="w-full pl-11 pr-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
+            />
+            <div v-if="keySearchQuery" class="absolute inset-y-0 right-0 pr-3 flex items-center">
+              <button @click="keySearchQuery = ''" class="p-1 hover:bg-gray-100 rounded-lg transition-colors">
+                <svg class="h-4 w-4 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <div v-if="filteredAvailableKeys.length === 0" class="text-center py-8">
+            <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 mb-3">
+              <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+            </div>
+            <p class="text-sm text-gray-500">未找到匹配的键名</p>
+          </div>
+          
+          <div v-else class="border-2 border-gray-200 rounded-xl p-1 bg-gray-50 max-h-96 overflow-y-auto">
             <div class="space-y-1">
-              <label v-for="key in availableKeys" :key="key" class="flex items-center gap-3 px-4 py-3 hover:bg-white rounded-lg cursor-pointer transition-all group">
+              <label v-for="key in filteredAvailableKeys" :key="key" class="flex items-center gap-3 px-4 py-3 hover:bg-white rounded-lg cursor-pointer transition-all group">
                 <input 
                   type="checkbox" 
                   :checked="filteredKeys.includes(key)"
