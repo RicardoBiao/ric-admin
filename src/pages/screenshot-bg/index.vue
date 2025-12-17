@@ -28,6 +28,9 @@ const mobileBorderWidth = ref(8)
 const pcUseDefaultColor = ref(true)
 const mobileUseDefaultColor = ref(true)
 
+// 区域大小比例设置 (PC端占比，移动端为 100 - PC端占比)
+const pcWidthPercent = ref(80)
+
 // 截图区域引用
 const screenshotArea = ref<HTMLElement | null>(null)
 
@@ -36,6 +39,7 @@ const bgColor = '#111828'
 
 const actualPcBorderColor = computed(() => pcUseDefaultColor.value ? defaultBorderColor : bgColor)
 const actualMobileBorderColor = computed(() => mobileUseDefaultColor.value ? defaultBorderColor : bgColor)
+const mobileWidthPercent = computed(() => 100 - pcWidthPercent.value)
 
 const currentPcImage = computed(() => pcImages.value[pcCurrentIndex.value])
 const currentMobileImage = computed(() => mobileImages.value[mobileCurrentIndex.value])
@@ -199,8 +203,8 @@ const captureScreenshot = async () => {
     ctx.fillStyle = 'rgb(17, 24, 40)'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     
-    // PC 端区域（80%）
-    const pcWidth = canvas.width * 0.8
+    // PC 端区域（使用用户设置的比例）
+    const pcWidth = canvas.width * (pcWidthPercent.value / 100)
     const pcHeight = canvas.height
     const pcPadding = 40 // 减小padding，让图片更大
     
@@ -245,7 +249,7 @@ const captureScreenshot = async () => {
       }
     }
     
-    // 移动端区域（20%）
+    // 移动端区域（使用用户设置的比例）
     const mobileX = pcWidth
     const mobileWidth = canvas.width - pcWidth
     const mobileHeight = canvas.height
@@ -331,9 +335,44 @@ const makeGif = () => {
   <div class="h-screen w-screen flex flex-col bg-gray-900">
     <!-- 工具栏 -->
     <div class="bg-gradient-to-r from-gray-800 via-gray-800 to-gray-900 border-b border-gray-700/50 backdrop-blur-sm">
+      <!-- 比例控制器 -->
+      <div class="px-4 py-2 border-b border-gray-700/30 bg-gray-800/30">
+        <div class="flex items-center justify-center gap-4">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+            </svg>
+            <span class="text-blue-300 text-xs font-medium min-w-[48px]">{{ pcWidthPercent }}%</span>
+          </div>
+          
+          <input 
+            type="range" 
+            v-model.number="pcWidthPercent" 
+            min="30" 
+            max="90" 
+            step="5"
+            class="w-64 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-thumb"
+          />
+          
+          <div class="flex items-center gap-2">
+            <span class="text-green-300 text-xs font-medium min-w-[48px]">{{ mobileWidthPercent }}%</span>
+            <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+            </svg>
+          </div>
+          
+          <button 
+            @click="pcWidthPercent = 80"
+            class="px-2 py-1 bg-gray-700/50 hover:bg-gray-600 text-gray-300 hover:text-white rounded text-[10px] transition-all"
+          >
+            重置
+          </button>
+        </div>
+      </div>
+      
       <div class="flex">
-        <!-- PC 端控制 (50%) -->
-        <div class="flex-1 border-r border-gray-700/50 px-3 py-2">
+        <!-- PC 端控制 (动态比例) -->
+        <div class="border-r border-gray-700/50 px-3 py-2" :style="{ flex: pcWidthPercent }">
           <div class="flex items-center gap-3 bg-gray-800/50 rounded-lg px-3 py-1.5 border border-gray-700/30">
             <div class="flex items-center gap-1.5">
               <div class="w-0.5 h-4 bg-blue-500 rounded-full"></div>
@@ -415,8 +454,8 @@ const makeGif = () => {
           </div>
         </div>
 
-        <!-- 移动端控制 (50%) -->
-        <div class="flex-1 px-3 py-2">
+        <!-- 移动端控制 (动态比例) -->
+        <div class="px-3 py-2" :style="{ flex: mobileWidthPercent }">
           <div class="flex items-center gap-3 bg-gray-800/50 rounded-lg px-3 py-1.5 border border-gray-700/30">
             <div class="flex items-center gap-1.5">
               <div class="w-0.5 h-4 bg-green-500 rounded-full"></div>
@@ -510,15 +549,17 @@ const makeGif = () => {
         background-color: rgb(17, 24, 40);
       "
     >
-      <!-- PC 端区域 (80%) -->
-      <div style="
-        flex: 8;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 32px;
-        overflow: auto;
-      ">
+      <!-- PC 端区域 (动态比例) -->
+      <div 
+        :style="`
+          flex: ${pcWidthPercent};
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 32px;
+          overflow: auto;
+        `"
+      >
         <div 
           v-if="currentPcImage"
           style="position: relative; display: inline-block;"
@@ -539,17 +580,19 @@ const makeGif = () => {
         </div>
       </div>
 
-      <!-- 移动端区域 (20%) -->
-      <div style="
-        flex: 2;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 16px;
-        border-left: 1px solid rgb(55, 65, 81);
-        overflow: auto;
-        min-width: 0;
-      ">
+      <!-- 移动端区域 (动态比例) -->
+      <div 
+        :style="`
+          flex: ${mobileWidthPercent};
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+          border-left: 1px solid rgb(55, 65, 81);
+          overflow: auto;
+          min-width: 0;
+        `"
+      >
         <div 
           v-if="currentMobileImage"
           style="position: relative; display: inline-block;"
@@ -623,3 +666,38 @@ const makeGif = () => {
     </Transition>
   </div>
 </template>
+
+<style scoped>
+/* 自定义滑块样式 */
+.slider-thumb::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #10b981);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  transition: all 0.2s;
+}
+
+.slider-thumb::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+}
+
+.slider-thumb::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #10b981);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  transition: all 0.2s;
+}
+
+.slider-thumb::-moz-range-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+}
+</style>
