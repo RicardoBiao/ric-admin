@@ -15,7 +15,6 @@ interface ImageItem {
 const images = ref<ImageItem[]>([])
 const delay = ref(500) // 默认每帧延迟 500ms
 const scale = ref(100) // 图片缩放比例，50-100%
-const sampleInterval = ref(10) // 采样间隔，值越大文件越小但质量下降
 const isGenerating = ref(false)
 const generatedGifUrl = ref('')
 const gifFileSize = ref(0) // GIF文件大小（字节）
