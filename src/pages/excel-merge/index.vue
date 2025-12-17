@@ -1,158 +1,192 @@
 <template>
-  <TheLayout>
-    <div class="p-6 space-y-6">
+  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
+    <div class="w-full">
       <!-- 页面标题 -->
-      <div class="text-center">
-        <h1 class="text-3xl font-bold text-gray-900">Excel 文件合并工具</h1>
-        <p class="text-gray-600 mt-2">上传两个 Excel 文件，按 ID 列进行合并（类似 SQL JOIN）</p>
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 mb-3 shadow-lg">
+          <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+        </div>
+        <h1 class="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">Excel 文件合并工具</h1>
+        <p class="text-gray-600">上传两个 Excel 文件，按 ID 列进行合并（类似 SQL JOIN）</p>
       </div>
 
       <!-- 文件上传区域 -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
         <!-- 第一个文件上传 -->
-        <Card>
-          <CardHeader>
-            <CardTitle>第一个 Excel 文件</CardTitle>
-          </CardHeader>
-          <CardContent class="space-y-4">
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              @change="handleFile1Upload"
-              class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
-            <div v-if="file1Info" class="text-sm text-green-600">
-              ✓ 已上传: {{ file1Info.name }} ({{ file1Info.sheets.length }} 个工作表)
+        <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 p-5 border border-gray-100">
+          <h2 class="text-lg font-semibold text-gray-800 mb-4">第一个 Excel 文件</h2>
+          <div class="space-y-4">
+            <label class="cursor-pointer group block">
+              <div class="border-2 border-dashed border-gray-300 group-hover:border-green-500 rounded-xl p-6 transition-all duration-200 bg-gradient-to-br from-gray-50 to-white group-hover:from-green-50 group-hover:to-emerald-50">
+                <div class="flex flex-col items-center gap-3">
+                  <div class="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                  </div>
+                  <div class="text-center">
+                    <p class="text-sm font-semibold text-gray-700">点击上传 Excel 文件</p>
+                    <p class="text-xs text-gray-500 mt-1">支持 .xlsx, .xls 格式</p>
+                  </div>
+                </div>
+              </div>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                @change="handleFile1Upload"
+                class="hidden"
+              />
+            </label>
+            <div v-if="file1Info" class="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <span>{{ file1Info.name }} ({{ file1Info.sheets.length }} 个工作表)</span>
             </div>
             <div v-if="file1Columns.length" class="space-y-2">
               <label class="block text-sm font-medium text-gray-700">选择 ID 列</label>
-              <select v-model="file1IdColumn" class="w-full p-2 border rounded-md">
+              <select v-model="file1IdColumn" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none bg-white">
                 <option value="">请选择 ID 列</option>
                 <option v-for="col in file1Columns" :key="col" :value="col">{{ col }}</option>
               </select>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         <!-- 第二个文件上传 -->
-        <Card>
-          <CardHeader>
-            <CardTitle>第二个 Excel 文件</CardTitle>
-          </CardHeader>
-          <CardContent class="space-y-4">
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              @change="handleFile2Upload"
-              class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
-            <div v-if="file2Info" class="text-sm text-green-600">
-              ✓ 已上传: {{ file2Info.name }} ({{ file2Info.sheets.length }} 个工作表)
+        <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 p-5 border border-gray-100">
+          <h2 class="text-lg font-semibold text-gray-800 mb-4">第二个 Excel 文件</h2>
+          <div class="space-y-4">
+            <label class="cursor-pointer group block">
+              <div class="border-2 border-dashed border-gray-300 group-hover:border-blue-500 rounded-xl p-6 transition-all duration-200 bg-gradient-to-br from-gray-50 to-white group-hover:from-blue-50 group-hover:to-indigo-50">
+                <div class="flex flex-col items-center gap-3">
+                  <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                  </div>
+                  <div class="text-center">
+                    <p class="text-sm font-semibold text-gray-700">点击上传 Excel 文件</p>
+                    <p class="text-xs text-gray-500 mt-1">支持 .xlsx, .xls 格式</p>
+                  </div>
+                </div>
+              </div>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                @change="handleFile2Upload"
+                class="hidden"
+              />
+            </label>
+            <div v-if="file2Info" class="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <span>{{ file2Info.name }} ({{ file2Info.sheets.length }} 个工作表)</span>
             </div>
             <div v-if="file2Columns.length" class="space-y-2">
               <label class="block text-sm font-medium text-gray-700">选择 ID 列</label>
-              <select v-model="file2IdColumn" class="w-full p-2 border rounded-md">
+              <select v-model="file2IdColumn" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white">
                 <option value="">请选择 ID 列</option>
                 <option v-for="col in file2Columns" :key="col" :value="col">{{ col }}</option>
               </select>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       <!-- 合并选项 -->
-      <Card>
-        <CardHeader>
-          <CardTitle>合并选项</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">合并方式</label>
-              <select v-model="joinType" class="w-full p-2 border rounded-md">
-                <option value="inner">内连接 (INNER JOIN)</option>
-                <option value="left">左连接 (LEFT JOIN)</option>
-                <option value="right">右连接 (RIGHT JOIN)</option>
-                <option value="full">全连接 (FULL JOIN)</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">工作表</label>
-              <select v-model="selectedSheet" class="w-full p-2 border rounded-md">
-                <option value="">请选择工作表</option>
-                <option v-for="sheet in availableSheets" :key="sheet" :value="sheet">{{ sheet }}</option>
-              </select>
-            </div>
-            <div class="flex items-end">
-              <Button 
-                :disabled="!canMerge" 
-                @click="mergeFiles"
-                class="w-full"
-              >
-                <Download class="w-4 h-4 mr-2" />
-                合并并下载
-              </Button>
-            </div>
+      <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 p-5 border border-gray-100">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">合并选项</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">合并方式</label>
+            <select v-model="joinType" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white">
+              <option value="inner">内连接 (INNER JOIN)</option>
+              <option value="left">左连接 (LEFT JOIN)</option>
+              <option value="right">右连接 (RIGHT JOIN)</option>
+              <option value="full">全连接 (FULL JOIN)</option>
+            </select>
           </div>
-        </CardContent>
-      </Card>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">工作表</label>
+            <select v-model="selectedSheet" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white">
+              <option value="">请选择工作表</option>
+              <option v-for="sheet in availableSheets" :key="sheet" :value="sheet">{{ sheet }}</option>
+            </select>
+          </div>
+          <div class="flex items-end">
+            <button
+              :disabled="!canMerge" 
+              @click="mergeFiles"
+              class="w-full py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 flex items-center justify-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+              </svg>
+              合并并下载
+            </button>
+          </div>
+        </div>
+      </div>
 
       <!-- 预览区域 -->
-      <Card v-if="mergedData.length">
-        <CardHeader>
-          <CardTitle>合并预览 (前10行)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div class="overflow-x-auto">
-            <table class="min-w-full table-auto border-collapse border border-gray-300">
-              <thead>
-                <tr class="bg-gray-50">
-                  <th v-for="column in previewColumns" :key="column" class="px-4 py-2 text-left text-sm font-medium text-gray-700 border border-gray-300">
-                    {{ column }}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(row, index) in previewData" :key="index" class="hover:bg-gray-50">
-                  <td v-for="column in previewColumns" :key="column" class="px-4 py-2 text-sm text-gray-900 border border-gray-300">
-                    {{ row[column] ?? '' }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p class="text-sm text-gray-500 mt-4">
-            总共 {{ mergedData.length }} 行数据
-          </p>
-        </CardContent>
-      </Card>
+      <div v-if="mergedData.length" class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 p-5 border border-gray-100">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold text-gray-800">合并预览（前10行）</h2>
+          <span class="text-sm font-medium text-purple-600 bg-purple-50 px-3 py-1 rounded-full">
+            📊 总共 {{ mergedData.length }} 行数据
+          </span>
+        </div>
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+          <table class="min-w-full table-auto border-collapse">
+            <thead>
+              <tr class="bg-gradient-to-r from-purple-50 to-pink-50">
+                <th v-for="column in previewColumns" :key="column" class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-b border-gray-200">
+                  {{ column }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, index) in previewData" :key="index" class="hover:bg-gray-50 transition-colors">
+                <td v-for="column in previewColumns" :key="column" class="px-4 py-3 text-sm text-gray-900 border-b border-gray-100">
+                  {{ row[column] ?? '' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       <!-- 状态信息 -->
-      <div v-if="loading" class="text-center py-4">
-        <div class="inline-flex items-center px-4 py-2 text-sm font-medium leading-6 text-white bg-blue-500 rounded-md">
+      <div v-if="loading" class="text-center py-8">
+        <div class="inline-flex items-center px-6 py-3 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
           <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          处理中...
+          处理中，请稍候...
         </div>
       </div>
 
-      <div v-if="error" class="bg-red-50 border border-red-200 rounded-md p-4">
-        <div class="text-red-800 text-sm">{{ error }}</div>
+      <div v-if="error" class="bg-red-50 border-2 border-red-200 rounded-xl p-4 shadow-lg">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <div class="text-red-800 text-sm font-medium">{{ error }}</div>
+        </div>
       </div>
     </div>
-  </TheLayout>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
-import TheLayout from '@/components/ric-ui/TheLayout.vue'
-import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Download } from 'lucide-vue-next'
 
 interface FileInfo {
   name: string
