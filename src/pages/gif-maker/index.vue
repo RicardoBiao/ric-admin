@@ -21,10 +21,25 @@ const gifFileSize = ref(0) // GIF文件大小（字节）
 const draggedIndex = ref<number | null>(null)
 const previewImage = ref<ImageItem | null>(null)
 
-// 重命名相关
+// 批量重命名相关
 const showRenameDialog = ref(false)
 const renamePrefix = ref('image')
 const renameStartNumber = ref(1)
+
+// 单张图片重命名相关
+const showSingleRenameDialog = ref(false)
+const renamingImage = ref<ImageItem | null>(null)
+const newImageName = ref('')
+
+// 右键菜单相关
+const showContextMenu = ref(false)
+const contextMenuPosition = ref({ x: 0, y: 0 })
+const contextMenuImage = ref<ImageItem | null>(null)
+
+// Toast 提示相关
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref<'success' | 'error'>('success')
 
 // 页面加载时检查是否有截图数据
 onMounted(() => {
@@ -223,10 +238,52 @@ const sortByFileName = () => {
 
 const openPreview = (img: ImageItem) => {
   previewImage.value = img
+  // 监听键盘事件
+  window.addEventListener('keydown', handlePreviewKeydown)
 }
 
 const closePreview = () => {
   previewImage.value = null
+  // 移除键盘事件监听
+  window.removeEventListener('keydown', handlePreviewKeydown)
+}
+
+// 获取当前预览图片的索引
+const getCurrentPreviewIndex = () => {
+  if (!previewImage.value) return -1
+  return images.value.findIndex(img => img.id === previewImage.value?.id)
+}
+
+// 切换到上一张
+const previewPrev = () => {
+  const currentIndex = getCurrentPreviewIndex()
+  if (currentIndex > 0) {
+    previewImage.value = images.value[currentIndex - 1]
+  }
+}
+
+// 切换到下一张
+const previewNext = () => {
+  const currentIndex = getCurrentPreviewIndex()
+  if (currentIndex < images.value.length - 1) {
+    previewImage.value = images.value[currentIndex + 1]
+  }
+}
+
+// 处理键盘事件
+const handlePreviewKeydown = (e: KeyboardEvent) => {
+  if (!previewImage.value) return
+  
+  if (e.key === 'ArrowLeft') {
+    e.preventDefault()
+    previewPrev()
+  } else if (e.key === 'ArrowRight') {
+    e.preventDefault()
+    previewNext()
+  } else if (e.key === 'Escape') {
+    e.preventDefault()
+    closePreview()
+  }
 }
 
 // 格式化文件大小
@@ -264,6 +321,109 @@ const cancelRename = () => {
   showRenameDialog.value = false
   renamePrefix.value = 'image'
   renameStartNumber.value = 1
+}
+
+// 打开单张图片重命名弹窗
+const openSingleRename = (img: ImageItem) => {
+  renamingImage.value = img
+  // 获取不带扩展名的文件名
+  const lastDotIndex = img.name.lastIndexOf('.')
+  newImageName.value = lastDotIndex > 0 ? img.name.substring(0, lastDotIndex) : img.name
+  showSingleRenameDialog.value = true
+}
+
+// 应用单张图片重命名
+const applySingleRename = () => {
+  if (!renamingImage.value || !newImageName.value.trim()) {
+    alert('请输入文件名')
+    return
+  }
+  
+  // 获取原文件扩展名
+  const ext = renamingImage.value.name.substring(renamingImage.value.name.lastIndexOf('.'))
+  // 更新文件名
+  renamingImage.value.name = newImageName.value.trim() + ext
+  
+  // 关闭弹窗
+  cancelSingleRename()
+}
+
+// 取消单张图片重命名
+const cancelSingleRename = () => {
+  showSingleRenameDialog.value = false
+  renamingImage.value = null
+  newImageName.value = ''
+}
+
+// 显示 Toast 提示
+const showToastMessage = (message: string, type: 'success' | 'error' = 'success') => {
+  toastMessage.value = message
+  toastType.value = type
+  showToast.value = true
+  setTimeout(() => {
+    showToast.value = false
+  }, 2000)
+}
+
+// 处理右键菜单
+const handleContextMenu = (event: MouseEvent, img: ImageItem) => {
+  event.preventDefault()
+  contextMenuImage.value = img
+  contextMenuPosition.value = { x: event.clientX, y: event.clientY }
+  showContextMenu.value = true
+  
+  // 点击其他地方关闭菜单
+  const closeMenu = () => {
+    showContextMenu.value = false
+    document.removeEventListener('click', closeMenu)
+  }
+  setTimeout(() => {
+    document.addEventListener('click', closeMenu)
+  }, 0)
+}
+
+// 下载单张图片
+const downloadSingleImage = () => {
+  if (!contextMenuImage.value) return
+  
+  const link = document.createElement('a')
+  link.href = contextMenuImage.value.url
+  link.download = contextMenuImage.value.name
+  link.click()
+  
+  showContextMenu.value = false
+}
+
+// 复制单张图片
+const copySingleImage = async () => {
+  if (!contextMenuImage.value) return
+  
+  try {
+    // 将 base64 转换为 blob
+    const response = await fetch(contextMenuImage.value.url)
+    const blob = await response.blob()
+    
+    // 使用 Clipboard API 复制图片
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        [blob.type]: blob
+      })
+    ])
+    
+    showToastMessage('图片已复制到剪贴板 ✓', 'success')
+  } catch (error) {
+    console.error('复制失败:', error)
+    showToastMessage('复制失败，请重试', 'error')
+  }
+  
+  showContextMenu.value = false
+}
+
+// 从右键菜单打开重命名
+const renameFromContextMenu = () => {
+  if (!contextMenuImage.value) return
+  openSingleRename(contextMenuImage.value)
+  showContextMenu.value = false
 }
 
 // 一键下载所有图片
@@ -406,6 +566,7 @@ const downloadAllImages = async () => {
                 @dragover="onDragOver"
                 @drop="onDrop($event, index)"
                 @dblclick="openPreview(img)"
+                @contextmenu="handleContextMenu($event, img)"
                 class="relative group cursor-move bg-gray-100 rounded-lg overflow-hidden aspect-square border-2 border-gray-200 hover:border-purple-500 transition-all"
               >
                 <img 
@@ -433,7 +594,7 @@ const downloadAllImages = async () => {
               </div>
             </div>
             
-            <p class="text-xs text-gray-500 mt-4 text-center">💡 提示：拖拽图片可以调整顺序，双击可以预览图片</p>
+            <p class="text-xs text-gray-500 mt-4 text-center">💡 提示：拖拽图片可以调整顺序，双击预览图片，右键重命名</p>
           </div>
 
           <!-- 空状态 -->
@@ -534,33 +695,147 @@ const downloadAllImages = async () => {
       </div>
     </div>
 
+    <!-- 右键菜单 -->
+    <div 
+      v-if="showContextMenu"
+      :style="{ left: contextMenuPosition.x + 'px', top: contextMenuPosition.y + 'px' }"
+      class="fixed z-[60] bg-white rounded-lg shadow-2xl border border-gray-200 py-1 min-w-[180px] animate-fadeIn"
+      @click.stop
+    >
+      <button
+        @click="renameFromContextMenu"
+        class="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors flex items-center gap-3"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+        </svg>
+        <span>修改名称</span>
+      </button>
+      
+      <button
+        @click="downloadSingleImage"
+        class="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-3"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+        </svg>
+        <span>下载图片</span>
+      </button>
+      
+      <button
+        @click="copySingleImage"
+        class="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors flex items-center gap-3"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+        </svg>
+        <span>复制图片</span>
+      </button>
+    </div>
+
     <!-- 图片预览模态框 -->
     <div 
       v-if="previewImage" 
       @click="closePreview"
-      class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-8 backdrop-blur-sm"
+      class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 md:p-8 backdrop-blur-sm"
     >
-      <div class="relative max-w-7xl max-h-full" @click.stop>
+      <div class="relative w-full h-full max-w-6xl flex flex-col items-center justify-center" @click.stop>
+        <!-- 关闭按钮 -->
         <button
           @click="closePreview"
-          class="absolute -top-12 right-0 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors"
+          class="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors z-10"
+          title="关闭 (Esc)"
         >
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
         </button>
-        <img 
-          :src="previewImage.url" 
-          :alt="previewImage.name" 
-          class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
-        />
-        <div class="mt-4 text-center">
-          <p class="text-white text-lg font-medium">{{ previewImage.name }}</p>
+        
+        <!-- 上一张按钮 -->
+        <button
+          v-if="getCurrentPreviewIndex() > 0"
+          @click="previewPrev"
+          class="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 z-10"
+          title="上一张 (←)"
+        >
+          <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+        </button>
+        
+        <!-- 下一张按钮 -->
+        <button
+          v-if="getCurrentPreviewIndex() < images.length - 1"
+          @click="previewNext"
+          class="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 z-10"
+          title="下一张 (→)"
+        >
+          <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          </svg>
+        </button>
+        
+        <!-- 图片容器 -->
+        <div class="flex-1 flex items-center justify-center w-full mb-4 overflow-hidden">
+          <img 
+            :src="previewImage.url" 
+            :alt="previewImage.name" 
+            class="max-w-full max-h-[calc(100vh-180px)] md:max-h-[calc(100vh-200px)] object-contain rounded-lg shadow-2xl"
+          />
+        </div>
+        
+        <!-- 底部信息 -->
+        <div class="w-full text-center space-y-2 px-4">
+          <p class="text-white text-base md:text-lg font-medium truncate">{{ previewImage.name }}</p>
+          <div class="flex items-center justify-center gap-2 text-xs md:text-sm text-gray-400 flex-wrap">
+            <span class="whitespace-nowrap">{{ getCurrentPreviewIndex() + 1 }} / {{ images.length }}</span>
+            <span class="text-gray-600 hidden md:inline">•</span>
+            <span class="items-center gap-1 hidden md:flex">
+              <kbd class="px-2 py-0.5 bg-white/10 rounded text-xs">←</kbd>
+              <kbd class="px-2 py-0.5 bg-white/10 rounded text-xs">→</kbd>
+              切换
+            </span>
+            <span class="text-gray-600 hidden md:inline">•</span>
+            <span class="items-center gap-1 hidden md:flex">
+              <kbd class="px-2 py-0.5 bg-white/10 rounded text-xs">Esc</kbd>
+              关闭
+            </span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 重命名弹窗 -->
+    <!-- Toast 提示 -->
+    <Transition
+      enter-active-class="transition duration-300 ease-out"
+      enter-from-class="opacity-0 translate-y-2"
+      enter-to-class="opacity-100 translate-y-0"
+      leave-active-class="transition duration-200 ease-in"
+      leave-from-class="opacity-100 translate-y-0"
+      leave-to-class="opacity-0 translate-y-2"
+    >
+      <div
+        v-if="showToast"
+        class="fixed top-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-lg shadow-2xl border backdrop-blur-sm"
+        :class="[
+          toastType === 'success' 
+            ? 'bg-green-500/95 text-white border-green-600' 
+            : 'bg-red-500/95 text-white border-red-600'
+        ]"
+      >
+        <p class="text-sm font-medium flex items-center gap-2">
+          <svg v-if="toastType === 'success'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+          {{ toastMessage }}
+        </p>
+      </div>
+    </Transition>
+
+    <!-- 批量重命名弹窗 -->
     <div 
       v-if="showRenameDialog" 
       @click="cancelRename"
@@ -620,6 +895,64 @@ const downloadAllImages = async () => {
         </div>
       </div>
     </div>
+
+    <!-- 单张图片重命名弹窗 -->
+    <div 
+      v-if="showSingleRenameDialog" 
+      @click="cancelSingleRename"
+      class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+    >
+      <div 
+        @click.stop
+        class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md transform transition-all"
+      >
+        <h3 class="text-xl font-bold text-gray-800 mb-4">✏️ 重命名图片</h3>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">原文件名</label>
+            <div class="px-4 py-2 bg-gray-100 rounded-lg text-gray-600 text-sm">
+              {{ renamingImage?.name }}
+            </div>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">新文件名</label>
+            <input 
+              v-model="newImageName"
+              type="text"
+              placeholder="请输入新文件名"
+              @keyup.enter="applySingleRename"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+              autofocus
+            />
+            <p class="text-xs text-gray-500 mt-1">扩展名将自动保留</p>
+          </div>
+          
+          <div class="bg-purple-50 rounded-lg p-3">
+            <p class="text-sm text-gray-600 mb-1">预览：</p>
+            <p class="text-sm font-mono text-purple-700 font-medium">
+              {{ newImageName || '(请输入文件名)' }}{{ renamingImage?.name.substring(renamingImage.name.lastIndexOf('.')) }}
+            </p>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button
+            @click="cancelSingleRename"
+            class="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors"
+          >
+            取消
+          </button>
+          <button
+            @click="applySingleRename"
+            class="flex-1 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium transition-colors"
+          >
+            确认
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -651,5 +984,20 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 50%;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(147, 51, 234, 0.4);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.15s ease-out;
 }
 </style>
