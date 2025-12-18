@@ -111,7 +111,7 @@
         </div>
 
         <!-- 文档处理工具 -->
-        <div 
+        <!-- <div 
           @click="navigateTo('/documents')"
           class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-6 cursor-pointer border-2 border-transparent hover:border-red-500 transform hover:-translate-y-2"
         >
@@ -132,7 +132,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
             </svg>
           </div>
-        </div>
+        </div> -->
 
         <!-- 客户管理工具 -->
         <!-- <div 
