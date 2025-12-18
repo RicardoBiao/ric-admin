@@ -358,7 +358,7 @@ const makeGif = () => {
       
       <div class="flex">
         <!-- PC 端控制 (动态比例) -->
-        <div class="border-r border-gray-700/50 px-3 py-2" :style="{ flex: pcWidthPercent }">
+        <div class="border-r border-gray-700/50 px-3 py-2" :style="{ flex: '50%' }">
           <div class="flex items-center gap-3 bg-gray-800/50 rounded-lg px-3 py-1.5 border border-gray-700/30">
             <div class="flex items-center gap-1.5">
               <div class="w-0.5 h-4 bg-blue-500 rounded-full"></div>
@@ -441,7 +441,7 @@ const makeGif = () => {
         </div>
 
         <!-- 移动端控制 (动态比例) -->
-        <div class="px-3 py-2" :style="{ flex: mobileWidthPercent }">
+        <div class="px-3 py-2" :style="{ flex: '50%' }">
           <div class="flex items-center gap-3 bg-gray-800/50 rounded-lg px-3 py-1.5 border border-gray-700/30">
             <div class="flex items-center gap-1.5">
               <div class="w-0.5 h-4 bg-green-500 rounded-full"></div>
