@@ -49,6 +49,14 @@ const routes = [
   {
     path: '/gif-maker',
     component: () => import('@/pages/gif-maker/index.vue'),
+  },
+  {
+    path: '/invoice-demo',
+    component: () => import('@/pages/vat-invoice/index.vue'),
+  },
+  {
+    path: '/vat-invoice',
+    component: () => import('@/pages/vat-invoice/index.vue'),
   }
 ]
 
