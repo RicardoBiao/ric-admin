@@ -57,6 +57,10 @@ const routes = [
   {
     path: '/vat-invoice',
     component: () => import('@/pages/vat-invoice/index.vue'),
+  },
+  {
+    path: '/tv',
+    component: () => import('@/pages/tv/index.vue'),
   }
 ]
 
