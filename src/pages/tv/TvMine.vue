@@ -418,33 +418,29 @@ const sourcesWithActiveState = computed(() => {
   }));
 });
 
-// 邀请码配置
-const INVITE_CODE_CONFIGS: Record<string, any> = {
-  WEB2025: {
-    cache_time: 7200,
-    api_site: {
-      'mtzy.me': {
-        name: '🎬茅台资源',
-        api: 'https://caiji.maotaizy.cc/api.php/provide/vod',
-        detail: 'https://mtzy.me',
-      },
-      "www.ryzyw.com": {
-        name: "🎬如意资源",
-        api: "https://pz.168188.dpdns.org/?url=https://cj.rycjapi.com/api.php/provide/vod",
-        detail: "https://www.ryzyw.com",
-      },
-      "www.haohuazy.com": {
-        name: "🎬豪华资源",
-        api: "https://pz.168188.dpdns.org/?url=https://hhzyapi.com/api.php/provide/vod",
-        detail: "https://www.haohuazy.com",
-      },
-      "bdzy1.com": {
-        name: "🎬百度云zy",
-        api: "https://pz.168188.dpdns.org/?url=https://api.apibdzy.com/api.php/provide/vod",
-        detail: "https://bdzy1.com",
+// 从环境变量读取邀请码配置
+const getInviteCodeConfigs = () => {
+  try {
+    const configStr = import.meta.env.VITE_INVITE_CODE_CONFIGS;
+    if (configStr) {
+      return JSON.parse(configStr);
+    }
+  } catch (error) {
+    console.error('解析邀请码配置失败:', error);
+  }
+  // 默认配置
+  return {
+    WEB2025: {
+      cache_time: 7200,
+      api_site: {
+        'mtzy.me': {
+          name: '🎬茅台资源',
+          api: 'https://caiji.maotaizy.cc/api.php/provide/vod',
+          detail: 'https://mtzy.me',
+        },
       },
     },
-  },
+  };
 };
 
 // 加载缓存大小
@@ -561,6 +557,7 @@ const handleImportInviteCode = async () => {
   }
 
   const upperCode = inviteCode.value.trim().toUpperCase();
+  const INVITE_CODE_CONFIGS = getInviteCodeConfigs();
   const config = INVITE_CODE_CONFIGS[upperCode];
 
   if (!config) {

@@ -208,6 +208,7 @@ import { ref, computed, onMounted } from 'vue';
 import type { VideoDetail, PlaySource, WatchHistory } from '@/types';
 import VideoPlayer from './VideoPlayer.vue';
 import { useTv, useFavorites, useWatchHistory } from '@/composables/useTv';
+import axios from 'axios';
 
 interface Props {
   vodId: number;
