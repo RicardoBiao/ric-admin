@@ -3,7 +3,6 @@ export interface VideoSource {
   id: string;
   name: string;
   url: string;
-  isActive: boolean;
 }
 
 // MacCMS API 响应类型
@@ -15,6 +14,7 @@ export interface MacCMSResponse<T> {
   limit: string;
   total: number;
   list: T[];
+  class?: VideoCategory[]; // ?ac=list 接口返回的分类列表
 }
 
 // 视频分类类型

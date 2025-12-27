@@ -11,20 +11,30 @@ import { createMacCMSService, MacCMSService } from '@/services/maccms';
 export function useTv() {
   const sources = ref<VideoSource[]>([]);
   const activeSource = ref<VideoSource | null>(null);
+  const activeSources = ref<VideoSource[]>([]);
   const categories = ref<VideoCategory[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
 
-  // 当前 MacCMS 服务实例
+  // 当前 MacCMS 服务实例（主源）
   const macCMSService = computed(() => {
     return activeSource.value ? createMacCMSService(activeSource.value.url) : null;
+  });
+
+  // 所有激活源的服务实例
+  const macCMSServices = computed(() => {
+    return activeSources.value.map(source => ({
+      source,
+      service: createMacCMSService(source.url)
+    }));
   });
 
   // 加载视频源
   const loadSources = async () => {
     try {
       sources.value = await videoSourceManager.getSources();
-      activeSource.value = await videoSourceManager.getActiveSource();
+      activeSources.value = await videoSourceManager.getActiveSources();
+      activeSource.value = activeSources.value[0] || null;
     } catch (err) {
       error.value = '加载视频源失败';
       console.error(err);
@@ -37,7 +47,6 @@ export function useTv() {
       const newSource = await videoSourceManager.addSource({
         name,
         url,
-        isActive: sources.value.length === 0,
       });
       await loadSources();
       return newSource;
@@ -70,20 +79,41 @@ export function useTv() {
     }
   };
 
-  // 加载分类
+  // 加载分类（聚合所有激活源的分类）
   const loadCategories = async () => {
-    if (!macCMSService.value) return;
+    if (macCMSServices.value.length === 0) return;
     
     try {
       loading.value = true;
-      const allCategories = await macCMSService.value.getCategories();
+      const allCategories: VideoCategory[] = [];
       
-      // 根据 type_id 去重
-      const uniqueCategories = allCategories.filter((category, index, self) => 
-        index === self.findIndex(c => c.type_id === category.type_id)
-      );
+      // 并发请求所有激活源的分类
+      const promises = macCMSServices.value.map(async ({ service }) => {
+        try {
+          return await service.getCategories();
+        } catch (err) {
+          console.error('获取分类失败:', err);
+          return [];
+        }
+      });
       
-      categories.value = uniqueCategories;
+      const results = await Promise.all(promises);
+      
+      // 合并所有分类
+      results.forEach(cats => {
+        allCategories.push(...cats);
+      });
+      
+      // 只按分类名称去重（不同源的相同分类可能有不同 type_id）
+      const uniqueCategories = allCategories.reduce((acc, category) => {
+        const key = category.type_name;
+        if (!acc.has(key)) {
+          acc.set(key, category);
+        }
+        return acc;
+      }, new Map<string, VideoCategory>());
+      
+      categories.value = Array.from(uniqueCategories.values());
     } catch (err) {
       error.value = '加载分类失败';
       console.error(err);
@@ -108,17 +138,135 @@ export function useTv() {
     }
   };
 
-  // 搜索视频
-  const searchVideos = async (keyword: string, page = 1) => {
-    if (!macCMSService.value) return null;
+  // 获取所有激活源的视频列表（聚合）
+  const getAllVideos = async (params: { page?: number; typeName?: string; limit?: number } = {}) => {
+    if (macCMSServices.value.length === 0) return null;
     
     try {
       loading.value = true;
-      const result = await macCMSService.value.searchVideos(keyword, page);
-      if (result && result.list.length > 0) {
+      
+      // 并发请求所有激活的源
+      const promises = macCMSServices.value.map(async ({ source, service }) => {
+        try {
+          // 如果有 typeName，需要先获取该源的分类列表，找到对应的 type_id
+          let typeId: number | undefined = undefined;
+          if (params.typeName) {
+            const cats = await service.getCategories();
+            console.log(`Categories for source ${source.name}:`, cats);
+            const matchedCat = cats.find(c => c.type_name === params.typeName);
+            typeId = matchedCat?.type_id;
+            // 如果该源没有这个分类，跳过
+            if (!typeId) {
+              return null;
+            }
+          }
+          
+          const result = await service.getVideoList({ 
+            page: params.page, 
+            typeId,
+            limit: params.limit 
+          });
+          // 为每个视频添加来源信息
+          if (result && result.list) {
+            result.list = result.list.map(video => ({
+              ...video,
+              source_name: source.name,
+              source_id: source.id,
+            }));
+          }
+          return result;
+        } catch (err) {
+          console.error(`获取源 ${source.name} 的视频失败:`, err);
+          return null;
+        }
+      });
+      
+      const results = await Promise.all(promises);
+      
+      // 合并所有视频结果
+      const allVideos: VideoDetail[] = [];
+      let maxPageCount = 1;
+      
+      results.forEach(result => {
+        if (result && result.list) {
+          allVideos.push(...result.list);
+          maxPageCount = Math.max(maxPageCount, result.pagecount);
+        }
+      });
+      
+      // 返回聚合结果
+      return {
+        code: 1,
+        msg: 'success',
+        page: params.page || 1,
+        pagecount: maxPageCount,
+        limit: params.limit || 20,
+        total: allVideos.length,
+        list: allVideos,
+      };
+    } catch (err) {
+      error.value = '获取视频列表失败';
+      console.error(err);
+      return null;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  // 搜索视频（聚合所有激活源的搜索结果）
+  const searchVideos = async (keyword: string, page = 1) => {
+    if (macCMSServices.value.length === 0) return null;
+    
+    try {
+      loading.value = true;
+      
+      // 并发搜索所有激活的源
+      const promises = macCMSServices.value.map(async ({ source, service }) => {
+        try {
+          const result = await service.searchVideos(keyword, page);
+          // 为每个视频添加来源信息
+          if (result && result.list) {
+            result.list = result.list.map(video => ({
+              ...video,
+              source_name: source.name,
+              source_id: source.id,
+            }));
+          }
+          return result;
+        } catch (err) {
+          console.error(`搜索源 ${source.name} 失败:`, err);
+          return null;
+        }
+      });
+      
+      const results = await Promise.all(promises);
+      
+      // 合并所有搜索结果
+      const allVideos: VideoDetail[] = [];
+      let totalCount = 0;
+      
+      results.forEach(result => {
+        if (result && result.list) {
+          allVideos.push(...result.list);
+          totalCount += result.total;
+        }
+      });
+      
+      // 添加搜索历史
+      if (allVideos.length > 0) {
         await searchHistoryManager.addHistory(keyword);
       }
-      return result;
+      
+      // 返回聚合结果
+      return {
+        code: 1,
+        msg: 'success',
+        page,
+        pagecount: 1, // 聚合搜索只返回一页
+        limit: '999',
+        total: totalCount,
+        list: allVideos,
+      };
     } catch (err) {
       error.value = '搜索视频失败';
       console.error(err);
@@ -159,16 +307,19 @@ export function useTv() {
   return {
     sources,
     activeSource,
+    activeSources,
     categories,
     loading,
     error,
     macCMSService,
+    macCMSServices,
     loadSources,
     addSource,
     removeSource,
     setActiveSource,
     loadCategories,
     getVideoList,
+    getAllVideos,
     searchVideos,
     getVideoDetail,
     parsePlaySources,

@@ -101,7 +101,7 @@ import { searchHistoryManager } from '@/core/utils/storage';
 import VideoGrid from './components/VideoGrid.vue';
 import { Search, X, Frown } from 'lucide-vue-next';
 
-const emit = defineEmits<{
+defineEmits<{
   'video-click': [video: VideoDetail];
 }>();
 

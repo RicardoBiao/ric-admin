@@ -113,37 +113,19 @@
           </div>
         </div>
 
-        <!-- 选集 -->
-        <div v-if="currentSource" class="border-b border-gray-800 pb-4">
-          <div class="px-4 py-3 flex items-center justify-between">
-            <h3 class="text-white font-medium">
-              选集 
-              <span class="text-sm text-gray-400 ml-2">共{{ currentSource.episodes.length }}集</span>
-            </h3>
-          </div>
-          <div class="px-4">
-            <div class="grid grid-cols-4 gap-2 max-h-80 overflow-y-auto">
-              <button
-                v-for="(episode, index) in currentSource.episodes"
-                :key="index"
-                :class="[
-                  'px-3 py-2 rounded-lg text-sm font-medium transition-all',
-                  currentEpisodeIndex === index 
-                    ? 'bg-blue-600 text-white shadow-lg' 
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                ]"
-                @click="selectEpisode(index)"
-              >
-                {{ episode.name }}
-              </button>
-            </div>
-          </div>
-        </div>
-
         <!-- 换源 -->
         <div v-if="playSources.length > 1" class="border-b border-gray-800 pb-4">
           <div class="px-4 py-3">
-            <h3 class="text-white font-medium mb-3">换源</h3>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-white font-medium">换源</h3>
+              <button
+                :disabled="testingAllSources"
+                class="text-sm text-blue-500 hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                @click="testAllSourcesSpeed"
+              >
+                {{ testingAllSources ? '测试中...' : '测速' }}
+              </button>
+            </div>
             <div class="space-y-2">
               <button
                 v-for="(source, index) in playSources"
@@ -158,11 +140,44 @@
               >
                 <span class="font-medium">{{ source.source }}</span>
                 <div class="flex items-center gap-2 text-xs">
+                  <span v-if="sourceSpeedTests[index]?.testing" class="text-yellow-400">
+                    测速中...
+                  </span>
+                  <span v-else-if="sourceSpeedTests[index]?.speed" class="text-green-400 font-medium">
+                    {{ formatSpeed(sourceSpeedTests[index].speed) }}
+                  </span>
                   <span class="text-gray-400">{{ source.episodes.length }}集</span>
                   <svg v-if="currentSourceIndex === index" class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                   </svg>
                 </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 选集 -->
+        <div v-if="currentSource" class="pb-4">
+          <div class="px-4 py-3 flex items-center justify-between">
+            <h3 class="text-white font-medium">
+              选集 
+              <span class="text-sm text-gray-400 ml-2">共{{ currentSource.episodes.length }}集</span>
+            </h3>
+          </div>
+          <div class="px-4">
+            <div class="grid grid-cols-4 gap-2">
+              <button
+                v-for="(episode, index) in currentSource.episodes"
+                :key="index"
+                :class="[
+                  'px-3 py-2 rounded-lg text-sm font-medium transition-all',
+                  currentEpisodeIndex === index 
+                    ? 'bg-blue-600 text-white shadow-lg' 
+                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                ]"
+                @click="selectEpisode(index)"
+              >
+                {{ episode.name }}
               </button>
             </div>
           </div>
@@ -199,7 +214,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const emit = defineEmits<{
+defineEmits<{
   back: [];
 }>();
 
@@ -216,6 +231,8 @@ const isFavorited = ref(false);
 const watchProgress = ref<WatchHistory | null>(null);
 const showContinuePrompt = ref(false);
 const showDetailPanel = ref(false);
+const sourceSpeedTests = ref<Record<number, { speed: number | null; testing: boolean }>>({});
+const testingAllSources = ref(false);
 
 const currentSource = computed(() => playSources.value[currentSourceIndex.value]);
 const currentPlayUrl = computed(() => {
@@ -343,6 +360,68 @@ const continueWatch = () => {
 const startFromBeginning = () => {
   watchProgress.value = null;
   showContinuePrompt.value = false;
+};
+
+// 测试单个源的速度
+const testSourceSpeed = async (sourceIndex: number): Promise<number | null> => {
+  const source = playSources.value[sourceIndex];
+  if (!source || source.episodes.length === 0) return null;
+
+  try {
+    sourceSpeedTests.value[sourceIndex] = { speed: null, testing: true };
+    
+    // 获取第一集的URL用于测试
+    const testUrl = source.episodes[0].url;
+    
+    // 开始计时
+    const startTime = performance.now();
+    
+    // 下载前 100KB 的数据
+    const response = await axios.get(testUrl, {
+      headers: {
+        'Range': 'bytes=0-102400', // 下载前100KB
+      },
+      responseType: 'blob',
+    });
+    
+    // 读取数据
+    const blob = response.data;
+    const endTime = performance.now();
+    
+    // 计算速度 (KB/s)
+    const timeTaken = (endTime - startTime) / 1000; // 秒
+    const dataSize = blob.size / 1024; // KB
+    const speed = dataSize / timeTaken; // KB/s
+    
+    sourceSpeedTests.value[sourceIndex] = { speed: Math.round(speed), testing: false };
+    return speed;
+  } catch (error) {
+    console.error(`测试源 ${sourceIndex} 速度失败:`, error);
+    sourceSpeedTests.value[sourceIndex] = { speed: null, testing: false };
+    return null;
+  }
+};
+
+// 测试所有源的速度
+const testAllSourcesSpeed = async () => {
+  if (testingAllSources.value) return;
+  
+  testingAllSources.value = true;
+  
+  // 并发测试所有源
+  const promises = playSources.value.map((_, index) => testSourceSpeed(index));
+  await Promise.all(promises);
+  
+  testingAllSources.value = false;
+};
+
+// 格式化速度显示
+const formatSpeed = (speed: number | null): string => {
+  if (speed === null) return '';
+  if (speed > 1024) {
+    return `${(speed / 1024).toFixed(1)} MB/s`;
+  }
+  return `${speed.toFixed(0)} KB/s`;
 };
 
 onMounted(() => {

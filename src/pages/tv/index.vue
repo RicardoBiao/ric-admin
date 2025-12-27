@@ -13,7 +13,10 @@
     <div class="flex-1 overflow-hidden">
       <!-- 首页 -->
       <div v-show="activeTab === 'home'" class="h-full">
-        <TvHome @video-click="showVideoDetail" />
+        <TvHome 
+          ref="homeRef"
+          @video-click="showVideoDetail" 
+        />
       </div>
 
       <!-- 搜索 -->
@@ -23,7 +26,10 @@
 
       <!-- 我的 -->
       <div v-show="activeTab === 'mine'" class="h-full">
-        <TvMine @video-click="showVideoDetail" />
+        <TvMine 
+          @video-click="showVideoDetail"
+          @refresh="handleRefresh"
+        />
       </div>
     </div>
 
@@ -78,11 +84,23 @@ const tabs = [
 
 const activeTab = ref('home');
 const selectedVideo = ref<VideoDetail | null>(null);
+const homeRef = ref<InstanceType<typeof TvHome> | null>(null);
 
 const showVideoDetail = (video: VideoDetail) => {
   console.log('显示视频详情:', video);
   console.log('视频ID:', video.vod_id);
   selectedVideo.value = video;
+};
+
+const handleRefresh = async () => {
+  // 切换到首页
+  activeTab.value = 'home';
+  // 等待下一个 tick 确保组件已更新
+  await new Promise(resolve => setTimeout(resolve, 100));
+  // 触发首页重新加载
+  if (homeRef.value) {
+    (homeRef.value as any).refreshHome?.();
+  }
 };
 
 onMounted(() => {

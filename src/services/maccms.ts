@@ -1,5 +1,6 @@
 import type { MacCMSResponse, VideoDetail, VideoCategory, PlaySource, PlayEpisode } from '../types';
 import { cacheManager } from '../core/utils/storage';
+import axios from 'axios';
 
 export class MacCMSService {
   private baseUrl: string;
@@ -22,32 +23,17 @@ export class MacCMSService {
     }
 
     try {
-      // 创建超时控制
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
-      
-      const response = await fetch(url, {
+      const response = await axios.get<T>(url, {
+        timeout: 10000, // 10秒超时
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        signal: controller.signal,
       });
 
-      clearTimeout(timeoutId);
+      console.log('MacCMS API response:', response);
 
-      if (!response.ok) {
-        // throw new Error(`HTTP error! status: ${response.status}`);
-        console.log('HTTP error! status: ${response.status}');
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        // throw new Error('Response is not JSON');
-        console.log('Response is not JSON');
-      }
-
-      const data = await response.json();
+      const data = response.data;
 
       // 保存到缓存
       if (useCache) {
@@ -59,21 +45,24 @@ export class MacCMSService {
       // 静默模式下不打印错误（用于并发搜索场景）
       if (!silent) {
         console.error('MacCMS API request error:', error);
-        throw error;
       }
-      throw "MacCMS API request error";
+      throw error;
     }
   }
 
   // 获取分类列表
   async getCategories(): Promise<VideoCategory[]> {
     try {
-      const response = await this.request<MacCMSResponse<VideoCategory>>(
-        '?ac=list'
+      const response = await this.request<MacCMSResponse<VideoDetail>>(
+        '?ac=list',
+        true,
+        false // 静默模式，不打印错误
       );
-      return response.list || [];
+      // 从 class 字段获取分类列表
+      console.log('Categories response:', response);
+      return response.class || [];
     } catch (error) {
-      console.error('Get categories error:', error);
+      // 静默失败，返回空数组，不抛出错误
       return [];
     }
   }
@@ -84,7 +73,7 @@ export class MacCMSService {
     typeId?: number;
     limit?: number;
   } = {}): Promise<MacCMSResponse<VideoDetail>> {
-    const { page = 1, typeId, limit = 20 } = params;
+    const { page = 1, typeId } = params;
     let endpoint = `?ac=detail&pg=${page}`;
     
     if (typeId) {
@@ -92,10 +81,14 @@ export class MacCMSService {
     }
 
     try {
-      const response = await this.request<MacCMSResponse<VideoDetail>>(endpoint);
+      const response = await this.request<MacCMSResponse<VideoDetail>>(
+        endpoint,
+        true,
+        true // 静默模式
+      );
       return response;
     } catch (error) {
-      console.error('Get video list error:', error);
+      // 静默失败
       return {
         code: -1,
         msg: 'Error',
@@ -125,17 +118,14 @@ export class MacCMSService {
     const endpoint = `?ac=detail&wd=${encodeURIComponent(keyword)}&pg=${page}`;
 
     try {
-      const response = await this.request<MacCMSResponse<VideoDetail>>(endpoint, false, silent);
+      const response = await this.request<MacCMSResponse<VideoDetail>>(endpoint, false, true);
       // 确保 list 存在
       if (!response.list) {
         response.list = [];
       }
       return response;
     } catch (error) {
-      // 静默模式下不打印错误
-      if (!silent) {
-        console.error('Search videos error:', error);
-      }
+      // 静默失败
       return {
         code: -1,
         msg: 'Error',
@@ -224,13 +214,12 @@ export class MacCMSService {
   // 检查视频源是否可用
   async checkAvailability(): Promise<boolean> {
     try {
-      const response = await fetch(this.baseUrl, {
-        method: 'HEAD',
+      const response = await axios.head(this.baseUrl, {
         headers: {
           'Accept': 'application/json',
         },
       });
-      return response.ok;
+      return response.status >= 200 && response.status < 300;
     } catch (error) {
       console.error('Check availability error:', error);
       return false;

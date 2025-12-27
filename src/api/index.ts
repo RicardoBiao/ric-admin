@@ -1,5 +1,6 @@
 // API 基础配置
 export const API_BASE_URL = '/api'
+import axios from 'axios';
 
 // 响应数据类型
 export interface ApiResponse<T = any> {
@@ -54,17 +55,15 @@ class ApiClient {
     }
 
     try {
-      const response = await fetch(fullUrl, {
-        ...defaultOptions,
-        ...options,
+      const response = await axios({
+        url: fullUrl,
+        method: defaultOptions.method || 'GET',
+        headers: defaultOptions.headers,
+        data: defaultOptions.body ? JSON.parse(defaultOptions.body as string) : undefined,
+        ...(options as any),
       })
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-      return data
+      return response.data
     } catch (error) {
       console.error('API request failed:', error)
       throw error

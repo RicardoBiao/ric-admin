@@ -147,10 +147,5 @@ declare module 'vue' {
     TooltipContent: typeof import('./src/components/ui/tooltip/TooltipContent.vue')['default']
     TooltipProvider: typeof import('./src/components/ui/tooltip/TooltipProvider.vue')['default']
     TooltipTrigger: typeof import('./src/components/ui/tooltip/TooltipTrigger.vue')['default']
-    TvTabs: typeof import('./src/components/tv/TvTabs.vue')['default']
-    VideoCard: typeof import('./src/components/tv/VideoCard.vue')['default']
-    VideoDetail: typeof import('./src/components/tv/VideoDetail.vue')['default']
-    VideoGrid: typeof import('./src/components/tv/VideoGrid.vue')['default']
-    VideoPlayer: typeof import('./src/components/tv/VideoPlayer.vue')['default']
   }
 }

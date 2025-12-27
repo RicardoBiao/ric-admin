@@ -3,6 +3,7 @@ import type { CacheData, VideoSource, FavoriteVideo, SearchHistory, WatchHistory
 // Storage keys 常量
 export const STORAGE_KEYS = {
   VIDEO_SOURCES: 'tv_video_sources',
+  ACTIVE_SOURCES: 'tv_active_sources',
   FAVORITES: 'tv_favorites',
   SEARCH_HISTORY: 'tv_search_history',
   WATCH_HISTORY: 'tv_watch_history',
@@ -255,9 +256,22 @@ export const videoSourceManager = {
     await storage.set(STORAGE_KEYS.VIDEO_SOURCES, sources);
   },
 
+  // 获取激活的源ID列表
+  async getActiveSourceIds(): Promise<string[]> {
+    const ids = await storage.get<string[]>(STORAGE_KEYS.ACTIVE_SOURCES);
+    return ids || [];
+  },
+
+  // 保存激活的源ID列表
+  async saveActiveSourceIds(ids: string[]): Promise<void> {
+    await storage.set(STORAGE_KEYS.ACTIVE_SOURCES, ids);
+  },
+
   // 添加视频源
   async addSource(source: Omit<VideoSource, 'id'>): Promise<VideoSource> {
     const sources = await this.getSources();
+    const activeIds = await this.getActiveSourceIds();
+    
     // 使用时间戳 + 随机数确保唯一性，避免批量添加时 ID 重复
     const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const newSource: VideoSource = {
@@ -266,14 +280,25 @@ export const videoSourceManager = {
     };
     sources.push(newSource);
     await this.saveSources(sources);
+    
+    // 默认激活新添加的源
+    activeIds.push(uniqueId);
+    await this.saveActiveSourceIds(activeIds);
+    
     return newSource;
   },
 
   // 删除视频源
   async removeSource(id: string): Promise<void> {
     const sources = await this.getSources();
+    const activeIds = await this.getActiveSourceIds();
+    
     const newSources = sources.filter(s => s.id !== id);
     await this.saveSources(newSources);
+    
+    // 同时从激活列表中移除
+    const newActiveIds = activeIds.filter(aid => aid !== id);
+    await this.saveActiveSourceIds(newActiveIds);
   },
 
   // 更新视频源
@@ -286,20 +311,53 @@ export const videoSourceManager = {
     }
   },
 
-  // 获取活跃的视频源
-  async getActiveSource(): Promise<VideoSource | null> {
+  // 获取所有激活的视频源
+  async getActiveSources(): Promise<VideoSource[]> {
     const sources = await this.getSources();
-    return sources.find(s => s.isActive) || sources[0] || null;
+    const activeIds = await this.getActiveSourceIds();
+    
+    // 如果没有激活的源，默认激活所有源
+    if (activeIds.length === 0 && sources.length > 0) {
+      const allIds = sources.map(s => s.id);
+      await this.saveActiveSourceIds(allIds);
+      return sources;
+    }
+    
+    return sources.filter(s => activeIds.includes(s.id));
   },
 
-  // 设置活跃视频源
+  // 获取主激活源（用于兼容旧代码）
+  async getActiveSource(): Promise<VideoSource | null> {
+    const activeSources = await this.getActiveSources();
+    return activeSources[0] || null;
+  },
+
+  // 设置激活状态
+  async setActiveState(id: string, active: boolean): Promise<void> {
+    const activeIds = await this.getActiveSourceIds();
+    
+    if (active) {
+      // 添加到激活列表
+      if (!activeIds.includes(id)) {
+        activeIds.push(id);
+        await this.saveActiveSourceIds(activeIds);
+      }
+    } else {
+      // 从激活列表移除
+      const newActiveIds = activeIds.filter(aid => aid !== id);
+      await this.saveActiveSourceIds(newActiveIds);
+    }
+  },
+
+  // 设置活跃视频源（兼容旧代码，设置为唯一激活源）
   async setActiveSource(id: string): Promise<void> {
-    const sources = await this.getSources();
-    const newSources = sources.map(s => ({
-      ...s,
-      isActive: s.id === id,
-    }));
-    await this.saveSources(newSources);
+    await this.saveActiveSourceIds([id]);
+  },
+
+  // 检查源是否激活
+  async isSourceActive(id: string): Promise<boolean> {
+    const activeIds = await this.getActiveSourceIds();
+    return activeIds.includes(id);
   },
 };
 

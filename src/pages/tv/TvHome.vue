@@ -11,8 +11,8 @@
         </button>
         <button
           v-for="category in categories"
-          :key="category.type_id"
-          :class="['px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors', selectedCategory?.type_id === category.type_id ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white']"
+          :key="category.type_name"
+          :class="['px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors', selectedCategory?.type_name === category.type_name ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white']"
           @click="selectedCategory = category"
         >
           {{ category.type_name }}
@@ -52,8 +52,8 @@
       <!-- 空状态 -->
       <div v-else class="flex items-center justify-center min-h-full">
         <div class="text-center">
-          <svg class="w-16 h-16 text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+          <svg class="w-16 h-16 text-gray-600 mb-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
           </svg>
           <p class="text-gray-400 mb-4">暂无视频</p>
           <button class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors" @click="checkSource">
@@ -72,12 +72,12 @@ import { useTv, useWatchHistory } from '@/composables/useTv';
 import VideoGrid from './components/VideoGrid.vue';
 import { useRouter } from 'vue-router';
 
-const emit = defineEmits<{
+defineEmits<{
   'video-click': [video: VideoDetail];
 }>();
 
 const router = useRouter();
-const { sources, loadSources, activeSource, loadCategories, categories, getVideoList, loading } = useTv();
+const { sources, loadSources, activeSource, loadCategories, categories, getAllVideos, loading } = useTv();
 const { history: watchHistory, loadHistory } = useWatchHistory();
 
 const videos = ref<VideoDetail[]>([]);
@@ -85,15 +85,11 @@ const selectedCategory = ref<VideoCategory | null>(null);
 const currentPage = ref(1);
 const hasMore = ref(true);
 
-// 加载视频列表
+// 加载视频列表（聚合所有激活源）
 const loadVideos = async (append = false) => {
-  if (!activeSource.value) {
-    return;
-  }
-
-  const response = await getVideoList({
+  const response = await getAllVideos({
     page: currentPage.value,
-    typeId: selectedCategory.value?.type_id,
+    typeName: selectedCategory.value?.type_name,
     limit: 20,
   });
 
@@ -125,6 +121,27 @@ watch(selectedCategory, () => {
   currentPage.value = 1;
   hasMore.value = true;
   loadVideos(false);
+});
+
+// 刷新首页（供父组件调用）
+const refreshHome = async () => {
+  console.log('刷新首页...');
+  currentPage.value = 1;
+  hasMore.value = true;
+  videos.value = [];
+  selectedCategory.value = null;
+  
+  // 重新加载数据
+  await loadSources();
+  if (activeSource.value) {
+    await loadCategories();
+    await loadVideos();
+    await loadHistory();
+  }
+};
+
+defineExpose({
+  refreshHome
 });
 
 onMounted(async () => {

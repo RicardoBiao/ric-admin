@@ -13,6 +13,14 @@
         @error="onImageError"
       />
       
+      <!-- 资源来源标签 -->
+      <div 
+        v-if="video.source_name" 
+        class="absolute bottom-2 left-2 bg-purple-500/90 backdrop-blur-sm px-2 py-0.5 rounded text-xs text-white font-medium"
+      >
+        {{ video.source_name }}
+      </div>
+      
       <!-- 更新状态标签 -->
       <div 
         v-if="video.vod_remarks" 

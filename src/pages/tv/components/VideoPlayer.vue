@@ -27,6 +27,7 @@ const emit = defineEmits<{
 const artRef = ref<HTMLDivElement>();
 let art: Artplayer | null = null;
 let progressInterval: ReturnType<typeof setInterval> | null = null;
+let hls: Hls | null = null;
 
 onMounted(() => {
   if (!artRef.value) return;
@@ -56,7 +57,7 @@ onMounted(() => {
     customType: {
       m3u8: function (video: HTMLVideoElement, url: string) {
         if (Hls.isSupported()) {
-          const hls = new Hls();
+          hls = new Hls();
           hls.loadSource(url);
           hls.attachMedia(video);
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -66,6 +67,47 @@ onMounted(() => {
     },
     moreVideoAttr: {
       crossOrigin: 'anonymous',
+      'x-webkit-airplay': 'allow',
+      'webkit-playsinline': '',
+    },
+  });
+
+  // 添加投屏按钮
+  (art as any).controls.add({
+    position: 'right',
+    html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-airplay-icon lucide-airplay"><path d="M5 17H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-1"/><path d="m12 15 5 6H7Z"/></svg>`,
+    tooltip: '投屏',
+    click: function () {
+      const video = (art as any)?.video;
+      if (!video) return;
+
+      // 检查是否支持 Remote Playback API
+      if ('remote' in video) {
+        const remote = (video as any).remote;
+        if (remote.state === 'disconnected') {
+          remote.prompt().catch((err: Error) => {
+            console.error('投屏失败:', err);
+            if (art && (art as any).notice) {
+              (art as any).notice.show = '投屏失败: ' + err.message;
+            }
+          });
+        } else {
+          remote.prompt();
+        }
+      } else if ((window as any).WebKitPlaybackTargetAvailabilityEvent) {
+        // Safari AirPlay 支持
+        if ((video as any).webkitShowPlaybackTargetPicker) {
+          (video as any).webkitShowPlaybackTargetPicker();
+        } else {
+          if (art && (art as any).notice) {
+            (art as any).notice.show = '您的设备不支持 AirPlay';
+          }
+        }
+      } else {
+        if (art && (art as any).notice) {
+          (art as any).notice.show = '您的设备不支持投屏功能';
+        }
+      }
     },
   });
 
@@ -93,6 +135,10 @@ onUnmounted(() => {
   if (progressInterval) {
     clearInterval(progressInterval);
   }
+  if (hls) {
+    hls.destroy();
+    hls = null;
+  }
   if (art) {
     art.destroy();
     art = null;
@@ -114,5 +160,10 @@ watch(() => props.url, (newUrl) => {
 
 :deep(.art-video-player) {
   overflow: hidden;
+}
+
+/* 投屏按钮 SVG 样式 */
+:deep(.art-control .lucide-airplay path) {
+  fill: none !important;
 }
 </style>

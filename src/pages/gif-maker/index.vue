@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 // @ts-ignore
 import GIF from 'gif.js'
 import JSZip from 'jszip'
+import axios from 'axios';
 
 interface ImageItem {
   id: string
@@ -400,8 +401,10 @@ const copySingleImage = async () => {
   
   try {
     // 将 base64 转换为 blob
-    const response = await fetch(contextMenuImage.value.url)
-    const blob = await response.blob()
+    const response = await axios.get(contextMenuImage.value.url, {
+      responseType: 'blob'
+    })
+    const blob = response.data
     
     // 使用 Clipboard API 复制图片
     await navigator.clipboard.write([
