@@ -22,12 +22,15 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
   'time-update': [currentTime: number, duration: number];
   'ended': [];
+  'connection-failed': [];
 }>();
 
 const artRef = ref<HTMLDivElement>();
 let art: Artplayer | null = null;
 let progressInterval: ReturnType<typeof setInterval> | null = null;
 let hls: Hls | null = null;
+let reconnectCount = 0; // 重连计数器
+const MAX_RECONNECT = 3; // 最大重连次数
 
 onMounted(() => {
   if (!artRef.value) return;
@@ -57,11 +60,42 @@ onMounted(() => {
     customType: {
       m3u8: function (video: HTMLVideoElement, url: string) {
         if (Hls.isSupported()) {
+          // 清理旧的 HLS 实例
+          if (hls) {
+            hls.destroy();
+          }
+          
           hls = new Hls();
           hls.loadSource(url);
           hls.attachMedia(video);
+          
+          // 监听视频加载成功，重置重连计数
+          video.addEventListener('loadeddata', () => {
+            reconnectCount = 0;
+            console.log('视频加载成功');
+          });
+          
+          // 监听视频错误
+          video.addEventListener('error', () => {
+            reconnectCount++;
+            console.error(`视频加载错误 (${reconnectCount}/${MAX_RECONNECT})`);
+            
+            if (reconnectCount >= MAX_RECONNECT) {
+              emit('connection-failed');
+            }
+          });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
           video.src = url;
+          
+          // 同样监听非 HLS 视频的错误
+          video.addEventListener('error', () => {
+            reconnectCount++;
+            console.error(`视频加载错误 (${reconnectCount}/${MAX_RECONNECT})`);
+            
+            if (reconnectCount >= MAX_RECONNECT) {
+              emit('connection-failed');
+            }
+          });
         }
       },
     },
@@ -70,6 +104,11 @@ onMounted(() => {
       'x-webkit-airplay': 'allow',
       'webkit-playsinline': '',
     },
+  });
+
+  // 监听普通视频加载成功
+  art.on('video:canplay', () => {
+    reconnectCount = 0;
   });
 
   // 添加投屏按钮
@@ -148,6 +187,8 @@ onUnmounted(() => {
 // 监听 URL 变化
 watch(() => props.url, (newUrl) => {
   if (art && newUrl) {
+    // URL 变化时重置重连计数
+    reconnectCount = 0;
     art.url = newUrl;
   }
 });

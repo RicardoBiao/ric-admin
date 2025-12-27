@@ -61,6 +61,29 @@ const routes = [
   {
     path: '/tv',
     component: () => import('@/pages/tv/index.vue'),
+    redirect: '/tv/home',
+    children: [
+      {
+        path: 'home',
+        name: 'TvHome',
+        component: () => import('@/pages/tv/TvHome.vue'),
+      },
+      {
+        path: 'search',
+        name: 'TvSearch',
+        component: () => import('@/pages/tv/TvSearch.vue'),
+      },
+      {
+        path: 'favorites',
+        name: 'TvFavorites',
+        component: () => import('@/pages/tv/TvFavorites.vue'),
+      },
+      {
+        path: 'mine',
+        name: 'TvMine',
+        component: () => import('@/pages/tv/TvMine.vue'),
+      },
+    ]
   }
 ]
 

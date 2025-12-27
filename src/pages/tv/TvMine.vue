@@ -48,28 +48,24 @@
               :key="source.id"
               class="bg-gray-800 border border-gray-700 rounded-lg p-4"
             >
-              <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-2">
                 <div class="flex-1 min-w-0">
                   <h4 class="text-white font-medium mb-1">{{ source.name }}</h4>
-                  <p class="text-xs text-gray-400 truncate">{{ source.url }}</p>
+                  <p class="text-xs text-gray-400 truncate" :title="source.url">{{ source.url }}</p>
                 </div>
-              </div>
-              <div class="flex gap-2">
-                <button
-                  class="flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-700 border border-gray-600 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors"
+                 <button
+                  class="flex-shrink-0 flex items-center justify-center p-1.5 bg-gray-700 border border-gray-600 hover:bg-gray-600 text-white rounded transition-colors"
                   @click="editSource(source)"
                   title="编辑"
                 >
                   <Edit class="w-4 h-4" />
-                  <span>编辑</span>
                 </button>
                 <button
-                  class="flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500/10 text-red-500 rounded-lg text-sm hover:bg-red-500/20 transition-colors"
+                  class="flex-shrink-0 flex items-center justify-center p-1.5 bg-red-500/10 text-red-500 rounded hover:bg-red-500/20 transition-colors"
                   @click="deleteSource(source.id)"
                   title="删除"
                 >
                   <Trash2 class="w-4 h-4" />
-                  <span>删除</span>
                 </button>
               </div>
             </div>
@@ -345,7 +341,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import type { VideoDetail, VideoSource } from '@/types';
 import { useTv, useWatchHistory } from '@/composables/useTv';
 import { cacheManager, videoSourceManager } from '@/core/utils/storage';
@@ -355,7 +351,6 @@ import {
   Trash2, 
   Download, 
   Plus, 
-  Check, 
   Edit, 
   Gift,
   Code,

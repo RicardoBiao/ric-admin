@@ -1,22 +1,62 @@
 <template>
   <div class="flex flex-col h-full">
-    <!-- 顶部分类导航 -->
+    <!-- 顶部分类选择器 -->
     <div class="flex-shrink-0 bg-gray-900/80 backdrop-blur-lg border-b border-gray-800 px-4 py-3">
-      <div class="category-scroll">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-bold text-white">RicTV</h2>
+        <!-- 分类按钮 -->
         <button
-          :class="['px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors', !selectedCategory ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white']"
-          @click="selectedCategory = null"
+          v-if="categories.length > 0"
+          class="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-full transition-colors max-w-[140px]"
+          @click="showCategoryModal = true"
         >
-          全部
+          <Menu class="w-4 h-4 text-gray-400" />
+          <span class="text-sm font-medium text-white truncate">{{ getSelectedCategoryName }}</span>
+          <ChevronDown class="w-4 h-4 text-gray-400" />
         </button>
-        <button
-          v-for="category in categories"
-          :key="category.type_name"
-          :class="['px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors', selectedCategory?.type_name === category.type_name ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white']"
-          @click="selectedCategory = category"
-        >
-          {{ category.type_name }}
-        </button>
+      </div>
+    </div>
+
+    <!-- 分类选择弹窗 -->
+    <div
+      v-if="showCategoryModal"
+      class="fixed inset-0 z-50 bg-black/50 flex items-end"
+      @click.self="showCategoryModal = false"
+    >
+      <div class="bg-gray-900 w-full max-h-[70vh] rounded-t-2xl">
+        <!-- 弹窗头部 -->
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+          <h3 class="text-lg font-semibold text-white">选择分类</h3>
+          <button
+            class="w-8 h-8 flex items-center justify-center hover:bg-gray-800 rounded-lg transition-colors"
+            @click="showCategoryModal = false"
+          >
+            <X class="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+        
+        <!-- 分类列表 -->
+        <div class="overflow-y-auto px-5 py-3" style="max-height: calc(70vh - 65px)">
+          <!-- 全部 -->
+          <button
+            :class="['w-full flex items-center justify-between px-4 py-3.5 rounded-xl mb-2 transition-colors', !selectedCategory ? 'bg-blue-600 text-white' : 'bg-gray-800 text-white hover:bg-gray-700']"
+            @click="selectCategory(null)"
+          >
+            <span class="text-[15px] font-medium">全部</span>
+            <Check v-if="!selectedCategory" class="w-5 h-5" />
+          </button>
+          
+          <!-- 分类列表 -->
+          <button
+            v-for="category in categories"
+            :key="category.type_name"
+            :class="['w-full flex items-center justify-between px-4 py-3.5 rounded-xl mb-2 transition-colors', selectedCategory?.type_name === category.type_name ? 'bg-blue-600 text-white' : 'bg-gray-800 text-white hover:bg-gray-700']"
+            @click="selectCategory(category)"
+          >
+            <span class="text-[15px] font-medium">{{ category.type_name }}</span>
+            <Check v-if="selectedCategory?.type_name === category.type_name" class="w-5 h-5" />
+          </button>
+        </div>
       </div>
     </div>
 
@@ -66,11 +106,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import type { VideoDetail, VideoCategory } from '@/types';
 import { useTv, useWatchHistory } from '@/composables/useTv';
 import VideoGrid from './components/VideoGrid.vue';
 import { useRouter } from 'vue-router';
+import { Menu, ChevronDown, X, Check } from 'lucide-vue-next';
 
 defineEmits<{
   'video-click': [video: VideoDetail];
@@ -84,6 +125,18 @@ const videos = ref<VideoDetail[]>([]);
 const selectedCategory = ref<VideoCategory | null>(null);
 const currentPage = ref(1);
 const hasMore = ref(true);
+const showCategoryModal = ref(false);
+
+// 获取选中分类的名称
+const getSelectedCategoryName = computed(() => {
+  return selectedCategory.value?.type_name || '全部';
+});
+
+// 选择分类
+const selectCategory = (category: VideoCategory | null) => {
+  selectedCategory.value = category;
+  showCategoryModal.value = false;
+};
 
 // 加载视频列表（聚合所有激活源）
 const loadVideos = async (append = false) => {
@@ -113,7 +166,7 @@ const loadMore = () => {
 
 // 检查视频源
 const checkSource = () => {
-  router.push('/tv/settings');
+  router.push('/tv/mine');
 };
 
 // 监听分类变化
@@ -169,16 +222,5 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.category-scroll {
-  display: flex;
-  gap: 0.5rem;
-  overflow-x: auto;
-  padding-bottom: 0.5rem;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.category-scroll::-webkit-scrollbar {
-  display: none;
-}
+/* 主要使用 Tailwind 类 */
 </style>
