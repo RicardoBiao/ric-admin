@@ -33,7 +33,8 @@ export function useTv() {
   const loadSources = async () => {
     try {
       sources.value = await videoSourceManager.getSources();
-      activeSources.value = await videoSourceManager.getActiveSources();
+      // 所有源默认都是激活的
+      activeSources.value = sources.value;
       activeSource.value = activeSources.value[0] || null;
     } catch (err) {
       error.value = '加载视频源失败';

@@ -44,7 +44,7 @@
         <div v-show="sourcesExpanded">
           <div v-if="sources.length > 0" class="space-y-2">
             <div
-              v-for="source in sourcesWithActiveState"
+              v-for="source in sources"
               :key="source.id"
               class="bg-gray-800 border border-gray-700 rounded-lg p-4"
             >
@@ -53,15 +53,6 @@
                   <h4 class="text-white font-medium mb-1">{{ source.name }}</h4>
                   <p class="text-xs text-gray-400 truncate">{{ source.url }}</p>
                 </div>
-                <span
-                  :class="[
-                    'ml-2 px-2.5 py-1 text-white text-xs rounded-full flex items-center gap-1 font-medium',
-                    source.isActive ? 'bg-green-600' : 'bg-gray-600'
-                  ]"
-                >
-                  <Check v-if="source.isActive" class="w-3 h-3" />
-                  {{ source.isActive ? '激活中' : '已停用' }}
-                </span>
               </div>
               <div class="flex gap-2">
                 <button
@@ -71,19 +62,6 @@
                 >
                   <Edit class="w-4 h-4" />
                   <span>编辑</span>
-                </button>
-                <button
-                  :class="[
-                    'flex items-center justify-center gap-1.5 px-3 py-2 text-sm rounded-lg transition-colors',
-                    source.isActive 
-                      ? 'bg-orange-500/10 text-orange-500 hover:bg-orange-500/20' 
-                      : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
-                  ]"
-                  @click="toggleSourceActive(source.id, !source.isActive)"
-                  :title="source.isActive ? '停用' : '激活'"
-                >
-                  <Check v-if="!source.isActive" class="w-4 h-4" />
-                  <span>{{ source.isActive ? '停用' : '激活' }}</span>
                 </button>
                 <button
                   class="flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500/10 text-red-500 rounded-lg text-sm hover:bg-red-500/20 transition-colors"
@@ -400,7 +378,6 @@ const showInviteCodeModal = ref(false);
 const showJsonModal = ref(false);
 const editingSource = ref<VideoSource | null>(null);
 const cacheSize = ref(0);
-const activeSourceIds = ref<string[]>([]);
 
 const sourceForm = ref({
   name: '',
@@ -409,14 +386,6 @@ const sourceForm = ref({
 
 const inviteCode = ref('');
 const jsonText = ref('');
-
-// 计算带激活状态的源列表
-const sourcesWithActiveState = computed(() => {
-  return sources.value.map(source => ({
-    ...source,
-    isActive: activeSourceIds.value.includes(source.id)
-  }));
-});
 
 // 从环境变量读取邀请码配置
 const getInviteCodeConfigs = () => {
@@ -465,34 +434,11 @@ const formatWatchTime = (timestamp: number): string => {
   return `${date.getMonth() + 1}-${date.getDate()}`;
 };
 
-// 加载激活状态
-const loadActiveStates = async () => {
-  activeSourceIds.value = await videoSourceManager.getActiveSourceIds();
-  // 如果没有激活的源且有源存在，默认激活所有源
-  if (activeSourceIds.value.length === 0 && sources.value.length > 0) {
-    activeSourceIds.value = sources.value.map(s => s.id);
-    await videoSourceManager.saveActiveSourceIds(activeSourceIds.value);
-  }
-};
-
-// 切换源激活状态
-const toggleSourceActive = async (id: string, isActive: boolean) => {
-  // 如果要停用且只剩一个激活的源，不允许
-  if (!isActive && activeSourceIds.value.length === 1 && activeSourceIds.value.includes(id)) {
-    alert('至少需要保留一个激活的视频源');
-    return;
-  }
-  
-  await videoSourceManager.setActiveState(id, isActive);
-  await loadActiveStates();
-};
-
 // 删除视频源
 const deleteSource = async (id: string) => {
   if (confirm('确定要删除这个视频源吗？')) {
     await removeSource(id);
     await loadSources();
-    await loadActiveStates();
   }
 };
 
@@ -666,7 +612,6 @@ const clearCache = async () => {
 
 onMounted(async () => {
   await loadSources();
-  await loadActiveStates();
   await loadHistory();
   await loadCacheSize();
 });
