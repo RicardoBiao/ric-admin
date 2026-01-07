@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, h, computed, watch } from 'vue';
+import { ref, onMounted, h, computed } from 'vue';
 import type { VideoDetail } from '@/types';
 import { useRoute, useRouter } from 'vue-router';
 import TvTabs from './components/TvTabs.vue';

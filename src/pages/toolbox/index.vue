@@ -14,6 +14,30 @@
 
       <!-- 工具卡片网格 -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- maccms 视频助手 -->
+        <div 
+          @click="navigateTo('/tv')"
+          class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-6 cursor-pointer border-2 border-transparent hover:border-cyan-500 transform hover:-translate-y-2"
+        >
+          <div class="flex items-start gap-4">
+            <div class="flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 flex items-center justify-center shadow-lg shadow-cyan-500/30 group-hover:scale-110 transition-transform">
+              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5h16a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1zm0 0l4 4m12-4l-4 4"></path>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-xl font-bold text-gray-800 mb-2 group-hover:text-cyan-600 transition-colors">maccms 视频助手</h3>
+              <p class="text-sm text-gray-600 leading-relaxed">聚合影视检索与收藏，快速直达首页体验</p>
+            </div>
+          </div>
+          <div class="mt-4 flex items-center text-sm text-cyan-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+            <span>立即使用</span>
+            <svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </div>
+        </div>
+
         <!-- JSON 对比工具 -->
         <div 
           @click="navigateTo('/json-compare')"

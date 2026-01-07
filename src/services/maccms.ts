@@ -102,7 +102,7 @@ export class MacCMSService {
   }
 
   // 搜索视频
-  async searchVideos(keyword: string, page = 1, silent = false): Promise<MacCMSResponse<VideoDetail>> {
+  async searchVideos(keyword: string, page = 1, _silent = false): Promise<MacCMSResponse<VideoDetail>> {
     if (!keyword.trim()) {
       return {
         code: -1,
