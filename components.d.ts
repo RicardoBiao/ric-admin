@@ -46,6 +46,7 @@ declare module 'vue' {
     Collapsible: typeof import('./src/components/ui/collapsible/Collapsible.vue')['default']
     CollapsibleContent: typeof import('./src/components/ui/collapsible/CollapsibleContent.vue')['default']
     CollapsibleTrigger: typeof import('./src/components/ui/collapsible/CollapsibleTrigger.vue')['default']
+    DataImportSheet: typeof import('./src/components/DataImportSheet.vue')['default']
     DataTableDemoColumn: typeof import('./src/components/ric-ui/DataTableDemoColumn.vue')['default']
     Dialog: typeof import('./src/components/ui/dialog/Dialog.vue')['default']
     DialogContent: typeof import('./src/components/ui/dialog/DialogContent.vue')['default']

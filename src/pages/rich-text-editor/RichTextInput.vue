@@ -8,7 +8,7 @@
 
     <!-- Tiptap 富文本编辑器核心 -->
     <div class="editor-content">
-      <EditorContent :editor="editor" />
+      <!-- <EditorContent :editor="editor" /> -->
     </div>
 
     <!-- 展示获取到的内容（调试用） -->
@@ -21,7 +21,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { Editor, EditorContent } from '@tiptap/vue-3'
+import { Editor } from '@tiptap/vue-3'
 import { Node } from '@tiptap/core'
 import Document from '@tiptap/extension-document'
 import Paragraph from '@tiptap/extension-paragraph'
@@ -54,7 +54,7 @@ const CustomFlex = Node.create({
 })
 
 // 2. 初始化编辑器实例
-const editor = ref<Editor | null>(null)
+const editor = ref<Editor | undefined>(undefined)
 // 存储获取到的编辑器内容（调试用）
 const content = ref('')
 
@@ -85,7 +85,7 @@ onMounted(() => {
 onUnmounted(() => {
   if (editor.value) {
     editor.value.destroy()
-    editor.value = null
+    // editor.value = null
   }
 })
 

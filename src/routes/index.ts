@@ -30,6 +30,19 @@ const routes = [
     component: () => import('@/pages/excel-merge/index.vue'),
   },
   {
+    path: '/data-import',
+    component: () => import('@/pages/data-import/index.vue'),
+  },
+  {
+    path: '/data-management',
+    component: () => import('@/pages/data-management/index.vue'),
+  },
+  {
+    path: '/analysis-results/:id?',
+    name: 'AnalysisResults',
+    component: () => import('@/pages/analysis-results/index.vue'),
+  },
+  {
     path: '/example',
     children: [
       {
@@ -105,24 +118,24 @@ export const router = createRouter({
 })
 
 // 路由守卫：未登录跳转到登录页
-router.beforeEach((to, _from, next) => {
-  const token = localStorage.getItem('accessToken')
+// router.beforeEach((to, _from, next) => {
+  // const token = localStorage.getItem('accessToken')
   
-  // 如果访问登录页，直接放行
-  if (to.path === '/login') {
-    // 已登录用户访问登录页，跳转到首页
-    if (token) {
-      next('/')
-    } else {
-      next()
-    }
-    return
-  }
+  // // 如果访问登录页，直接放行
+  // if (to.path === '/login') {
+  //   // 已登录用户访问登录页，跳转到首页
+  //   if (token) {
+  //     next('/')
+  //   } else {
+  //     next()
+  //   }
+  //   return
+  // }
   
-  // 其他页面需要登录
-  if (!token) {
-    next('/login')
-  } else {
-    next()
-  }
-})
+  // // 其他页面需要登录
+  // if (!token) {
+  //   next('/login')
+  // } else {
+  //   next()
+  // }
+// })

@@ -46,7 +46,7 @@ const renderChallenge = () => {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
   
-  const { c, s, d } = challenge.value
+  const { s, d } = challenge.value
   
   // 设置 canvas 尺寸
   canvas.width = s * 10
@@ -105,7 +105,7 @@ const verifyChallenge = async () => {
   
   try {
     // cap.js 期望的解决方案格式
-    const solutions = selectedPoints.value.map((p, i) => i)
+    const solutions = selectedPoints.value.map((_, i) => i)
     
     const result = await authApi.redeemChallenge({
       token: challengeToken.value,

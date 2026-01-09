@@ -7,7 +7,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
+// import { Input } from '@/components/ui/input'
 import CaptchaWidget from '@/components/CaptchaWidget.vue'
 
 const props = defineProps<{
@@ -56,26 +56,26 @@ const handleCaptchaSuccess = (token: string) => {
         <FieldLabel for="username">
           用户名
         </FieldLabel>
-        <Input 
+        <!-- <Input 
           id="username" 
           type="text" 
           placeholder="请输入用户名" 
           required
           :model-value="username"
           @update:model-value="emit('update:username', $event)"
-        />
+        /> -->
       </Field>
       <Field>
         <FieldLabel for="password">
           密码
         </FieldLabel>
-        <Input 
+        <!-- <Input 
           id="password" 
           type="password" 
           required
           :model-value="password"
           @update:model-value="emit('update:password', $event)"
-        />
+        /> -->
       </Field>
       
       <!-- 验证码组件 -->

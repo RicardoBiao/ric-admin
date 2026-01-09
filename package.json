@@ -34,6 +34,7 @@
     "jszip": "^3.10.1",
     "lucide-vue-next": "^0.525.0",
     "mammoth": "^1.11.0",
+    "marked": "^17.0.1",
     "md-editor-v3": "^6.2.1",
     "pizzip": "^3.2.0",
     "radix-vue": "^1.9.8",
