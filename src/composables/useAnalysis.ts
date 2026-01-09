@@ -3,7 +3,7 @@
  */
 
 import { ref, computed } from 'vue'
-import type { AnalysisPromptTemplate, AnalysisRecord } from '@/types/analysis'
+import type { AnalysisPromptTemplate, AnalysisRecord, ChartConfig } from '@/types/analysis'
 import type { SavedDataRecord } from './useSavedData'
 import type { FieldMapping } from '@/types/system-fields'
 
@@ -137,7 +137,8 @@ export function useAnalysisRecords() {
     dataRecords: SavedDataRecord[],
     prompt: string,
     result: string,
-    duration?: number
+    duration?: number,
+    charts?: ChartConfig[]
   ): AnalysisRecord => {
     const record: AnalysisRecord = {
       id: `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -158,13 +159,25 @@ export function useAnalysisRecords() {
       prompt,
       result,
       analyzedAt: new Date().toISOString(),
-      duration
+      duration,
+      hasCharts: charts && charts.length > 0,
+      charts: charts || []
     }
     
     records.value.unshift(record) // 新记录放在最前面
     saveToStorage()
     
     return record
+  }
+
+  // 更新记录的图表
+  const updateCharts = (id: string, charts: ChartConfig[]) => {
+    const record = records.value.find(r => r.id === id)
+    if (record) {
+      record.charts = charts
+      record.hasCharts = charts.length > 0
+      saveToStorage()
+    }
   }
 
   // 删除记录
@@ -194,6 +207,7 @@ export function useAnalysisRecords() {
   })
 
   // 初始化时加载
+  // 初始化时加载
   loadRecords()
 
   return {
@@ -203,6 +217,7 @@ export function useAnalysisRecords() {
     deleteRecord,
     deleteRecords,
     getRecord,
+    updateCharts,
     loadRecords
   }
 }

@@ -438,25 +438,50 @@
       </DialogContent>
     </Dialog>
 
-    <!-- 浮动导入按钮 -->
-    <button
-      @click="showImportSheet = true"
-      class="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-110 flex items-center justify-center"
-    >
-      <svg
-        class="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
+    <!-- 浮动按钮组 -->
+    <div class="fixed bottom-8 right-8 flex flex-col gap-3">
+      <!-- 跳转到分析历史页面按钮 -->
+      <button
+        @click="router.push('/analysis-results')"
+        class="w-14 h-14 rounded-full bg-secondary text-secondary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-110 flex items-center justify-center"
+        title="查看分析历史"
       >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M12 4v16m8-8H4"
-        />
-      </svg>
-    </button>
+        <svg
+          class="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+          />
+        </svg>
+      </button>
+      
+      <!-- 导入数据按钮 -->
+      <button
+        @click="showImportSheet = true"
+        class="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-110 flex items-center justify-center"
+        title="导入数据"
+      >
+        <svg
+          class="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 4v16m8-8H4"
+          />
+        </svg>
+      </button>
+    </div>
 
     <!-- 数据导入侧滑组件 -->
     <DataImportSheet
@@ -494,6 +519,8 @@ import {
 import * as XLSX from 'xlsx'
 import { toast } from 'vue-sonner'
 import { getDeepSeekClient } from '@/api/deepseek'
+import { useChartGenerator } from '@/composables/useChartGenerator'
+import { parseChartsFromDeepSeek } from '@/utils/chartParser'
 
 const router = useRouter()
 
@@ -513,6 +540,8 @@ const {
 const {
   createRecord: createAnalysisRecord
 } = useAnalysisRecords()
+
+const { generateFinancialCharts } = useChartGenerator()
 
 const scenarios = DATA_IMPORT_SCENARIOS
 
@@ -546,7 +575,13 @@ const stats = getStats()
 
 // 数据导入完成后刷新列表
 const handleDataImported = () => {
-  // 数据会自动更新，因为 useSavedData 使用的是响应式数据
+  // 强制刷新统计信息
+  Object.assign(stats, getStats())
+  // 如果当前选中了场景，需要刷新过滤后的记录
+  if (selectedScenarioKey.value) {
+    // 触发计算属性重新计算
+    currentPage.value = 1
+  }
   toast.success('数据已导入并保存')
 }
 
@@ -708,7 +743,7 @@ ${JSON.stringify(record.data.slice(0, 5), null, 2)}
 `
     }).join('\n---\n')
 
-    const prompt = `你是一个专业的数据分析师。请根据以下数据和用户的分析诉求，提供详细的分析报告。
+    const prompt = `你是一个专业的财务数据分析师。请根据以下数据和用户的分析诉求，提供详细的分析报告和可视化图表。
 
 用户诉求：
 ${analysisPrompt.value}
@@ -716,13 +751,48 @@ ${analysisPrompt.value}
 数据信息：
 ${dataContext}
 
-请提供：
+**请按以下格式输出：**
+
+## 分析报告
+（这里写详细的分析内容，使用 Markdown 格式）
+
 1. 数据概况总结
 2. 关键发现和洞察
 3. 具体的数据分析结果
 4. 实用的建议和结论
 
-请用中文回复，使用 Markdown 格式组织内容。`
+## 图表配置
+（在代码块中输出 JSON 格式的图表配置数组）
+
+\`\`\`json
+[
+  {
+    "type": "line|bar|pie",
+    "title": "图表标题",
+    "description": "图表说明",
+    "xAxis": ["项目1", "项目2", ...],
+    "series": [
+      {
+        "name": "系列名称",
+        "data": [数值1, 数值2, ...]
+      }
+    ]
+  }
+]
+\`\`\`
+
+**图表类型说明：**
+- line: 折线图，适合展示趋势变化
+- bar: 柱状图，适合展示对比数据
+- pie: 饼图，适合展示占比分布
+
+**重要提示：**
+1. 必须输出至少2-4个有价值的图表配置
+2. 图表数据必须基于提供的实际数据计算
+3. JSON 格式必须严格正确，可以被解析
+4. 确保图表配置在 \`\`\`json 代码块中
+
+请用中文回复。`
 
     // 调用 DeepSeek API
     let result = ''
@@ -735,16 +805,35 @@ ${dataContext}
       () => {
           const duration = Date.now() - startTime
 
+          // 首先尝试从 DeepSeek 响应中解析图表配置
+          let charts = parseChartsFromDeepSeek(result)
+          
+          // 如果 DeepSeek 没有返回有效的图表配置，使用自动生成
+          if (charts.length === 0) {
+            console.log('No charts from DeepSeek, using auto-generated charts')
+            charts = generateFinancialCharts(selectedDataForAnalysis.value.map(r => ({
+              scenarioKey: r.scenarioKey,
+              scenarioName: r.scenarioName,
+              data: r.data,
+              mappings: r.mappings.map(m => ({
+                targetField: m.targetField,
+                targetLabel: m.targetLabel || m.targetField
+              }))
+            })))
+          }
+
           // 保存分析记录
           const analysisRecord = createAnalysisRecord(
             analysisTitle.value,
             selectedDataForAnalysis.value,
             analysisPrompt.value,
             result,
-            duration
+            duration,
+            charts
           )
 
-          toast.success('分析完成')
+          const chartMsg = charts.length > 0 ? `，已生成 ${charts.length} 个图表` : ''
+          toast.success(`分析完成${chartMsg}`)
           
           // 重置表单
           showAnalysisDialog.value = false

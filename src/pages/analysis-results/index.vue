@@ -69,19 +69,55 @@
                 <span>
                   {{ currentRecord.dataSnapshot.reduce((sum, d) => sum + d.rowCount, 0) }} 行数据
                 </span>
+                <span v-if="currentRecord.hasCharts" class="text-green-600">
+                  📈 {{ currentRecord.charts?.length || 0 }} 个图表
+                </span>
               </div>
             </div>
-            <Button
-              variant="destructive"
-              size="sm"
-              @click="handleDelete(currentRecord.id)"
-            >
-              删除
-            </Button>
+            <div class="flex gap-2">
+              <Button
+                v-if="!currentRecord.hasCharts"
+                variant="default"
+                size="sm"
+                @click="handleGenerateCharts"
+                :disabled="generatingCharts"
+              >
+                <span v-if="generatingCharts">生成中...</span>
+                <span v-else>📈 生成图表</span>
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                @click="handleDelete(currentRecord.id)"
+              >
+                删除
+              </Button>
+            </div>
           </div>
         </div>
 
         <div class="p-6 space-y-6">
+          <!-- 数据图表 -->
+          <div v-if="currentRecord.hasCharts && currentRecord.charts && currentRecord.charts.length > 0">
+            <h3 class="text-lg font-semibold mb-3">数据可视化</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div
+                v-for="chart in currentRecord.charts"
+                :key="chart.id"
+                class="border rounded-lg p-4 bg-card"
+              >
+                <VChart
+                  :option="chart.option"
+                  :style="{ height: '350px', width: '100%' }"
+                  autoresize
+                />
+                <p v-if="chart.description" class="text-xs text-muted-foreground mt-2">
+                  {{ chart.description }}
+                </p>
+              </div>
+            </div>
+          </div>
+
           <!-- 分析诉求 -->
           <div>
             <h3 class="text-lg font-semibold mb-3">分析诉求</h3>
@@ -199,17 +235,44 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAnalysisRecords } from '@/composables/useAnalysis'
+import { useChartGenerator } from '@/composables/useChartGenerator'
 import { Button } from '@/components/ui/button'
 import { toast } from 'vue-sonner'
 import { marked } from 'marked'
+import VChart from 'vue-echarts'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { BarChart, LineChart, PieChart, ScatterChart, RadarChart } from 'echarts/charts'
+import {
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent
+} from 'echarts/components'
+
+// 注册 ECharts 组件
+use([
+  CanvasRenderer,
+  BarChart,
+  LineChart,
+  PieChart,
+  ScatterChart,
+  RadarChart,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent
+])
 
 const route = useRoute()
 const router = useRouter()
 
-const { records, deleteRecord } = useAnalysisRecords()
+const { records, deleteRecord, updateCharts } = useAnalysisRecords()
+const { generateFinancialCharts } = useChartGenerator()
 
 const selectedRecordId = ref<string | null>(null)
 const expandedData = ref<Record<number, boolean>>({})
+const generatingCharts = ref(false)
 
 // 当前选中的记录
 const currentRecord = computed(() => {
@@ -255,6 +318,29 @@ const renderMarkdown = (markdown: string) => {
   } catch (error) {
     console.error('Markdown 渲染失败:', error)
     return markdown
+  }
+}
+
+// 生成图表
+const handleGenerateCharts = () => {
+  if (!currentRecord.value) return
+
+  generatingCharts.value = true
+  
+  try {
+    const charts = generateFinancialCharts(currentRecord.value.dataSnapshot)
+    
+    if (charts.length > 0) {
+      updateCharts(currentRecord.value.id, charts)
+      toast.success(`成功生成 ${charts.length} 个图表`)
+    } else {
+      toast.warning('当前数据无法生成图表，请确保数据包含必要的字段')
+    }
+  } catch (error) {
+    console.error('生成图表失败:', error)
+    toast.error('生成图表失败')
+  } finally {
+    generatingCharts.value = false
   }
 }
 

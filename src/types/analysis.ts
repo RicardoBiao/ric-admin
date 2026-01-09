@@ -49,4 +49,24 @@ export interface AnalysisRecord {
   analyzedAt: string
   /** 分析耗时（毫秒） */
   duration?: number
+  /** 是否已生成图表 */
+  hasCharts?: boolean
+  /** 图表配置数据 */
+  charts?: ChartConfig[]
+}
+
+/**
+ * 图表配置
+ */
+export interface ChartConfig {
+  /** 图表ID */
+  id: string
+  /** 图表标题 */
+  title: string
+  /** 图表类型 */
+  type: 'line' | 'bar' | 'pie' | 'scatter' | 'radar'
+  /** 图表配置选项 */
+  option: any
+  /** 图表数据说明 */
+  description?: string
 }

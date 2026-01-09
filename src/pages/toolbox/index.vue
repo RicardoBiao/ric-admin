@@ -134,6 +134,30 @@
           </div>
         </div>
 
+        <!-- 数据分析工具 -->
+        <div 
+          @click="navigateTo('/data-management')"
+          class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-6 cursor-pointer border-2 border-transparent hover:border-pink-500 transform hover:-translate-y-2"
+        >
+          <div class="flex items-start gap-4">
+            <div class="flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center shadow-lg shadow-pink-500/30 group-hover:scale-110 transition-transform">
+              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-xl font-bold text-gray-800 mb-2 group-hover:text-pink-600 transition-colors">数据分析工具</h3>
+              <p class="text-sm text-gray-600 leading-relaxed">导入银行流水、发票、凭证等财务数据，AI 智能分析生成可视化报表</p>
+            </div>
+          </div>
+          <div class="mt-4 flex items-center text-sm text-pink-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+            <span>立即使用</span>
+            <svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </div>
+        </div>
+
         <!-- 文档处理工具 -->
         <!-- <div 
           @click="navigateTo('/documents')"

@@ -31,71 +31,78 @@ export interface DataImportScenario {
 }
 
 /**
- * 客户交易原始数据系统字段配置
+ * 银行流水系统字段配置
  */
-export const CUSTOMER_TRANSACTION_FIELDS: SystemField[] = [
-  {
-    key: 'customerName',
-    label: '客户名称',
-    type: 'string',
-    required: true,
-    description: '客户的公司或个人名称'
-  },
+export const BANK_STATEMENT_FIELDS: SystemField[] = [
   {
     key: 'transactionDate',
     label: '交易日期',
     type: 'date',
     required: true,
-    description: '交易发生的日期'
+    description: '银行交易发生的日期'
   },
   {
-    key: 'transactionAmount',
-    label: '交易金额',
-    type: 'number',
+    key: 'transactionTime',
+    label: '交易时间',
+    type: 'string',
+    required: false,
+    description: '具体交易时间'
+  },
+  {
+    key: 'summary',
+    label: '摘要',
+    type: 'string',
     required: true,
-    description: '交易的金额数值'
+    description: '交易摘要说明'
   },
   {
-    key: 'productName',
-    label: '产品名称',
+    key: 'oppositeAccount',
+    label: '对方账户',
     type: 'string',
     required: false,
-    description: '交易的产品或服务名称'
+    description: '对方账号或名称'
   },
   {
-    key: 'invoiceNumber',
-    label: '发票号码',
+    key: 'oppositeName',
+    label: '对方户名',
     type: 'string',
     required: false,
-    description: '发票的唯一编号'
+    description: '对方账户名称'
   },
   {
-    key: 'paymentMethod',
-    label: '支付方式',
-    type: 'string',
-    required: false,
-    description: '支付方式：现金、转账、支票等'
-  },
-  {
-    key: 'taxAmount',
-    label: '税额',
+    key: 'debitAmount',
+    label: '借方金额',
     type: 'number',
     required: false,
-    description: '交易的税额'
+    description: '支出金额'
   },
   {
-    key: 'discount',
-    label: '折扣',
+    key: 'creditAmount',
+    label: '贷方金额',
     type: 'number',
     required: false,
-    description: '折扣金额或比例'
+    description: '收入金额'
   },
   {
-    key: 'status',
-    label: '状态',
+    key: 'balance',
+    label: '余额',
+    type: 'number',
+    required: false,
+    description: '账户余额'
+  },
+  {
+    key: 'currencyType',
+    label: '币种',
     type: 'string',
     required: false,
-    description: '交易状态：待处理、已完成、已取消等'
+    description: '货币类型：人民币、美元等'
+  },
+  {
+    key: 'serialNumber',
+    label: '流水号',
+    type: 'string',
+    required: false,
+    description: '银行流水号'
   },
   {
     key: 'remarks',
@@ -107,133 +114,127 @@ export const CUSTOMER_TRANSACTION_FIELDS: SystemField[] = [
 ]
 
 /**
- * 员工信息系统字段配置
+ * 发票系统字段配置
  */
-export const EMPLOYEE_FIELDS: SystemField[] = [
+export const INVOICE_FIELDS: SystemField[] = [
   {
-    key: 'employeeId',
-    label: '员工编号',
+    key: 'invoiceNumber',
+    label: '发票号码',
     type: 'string',
     required: true,
-    description: '员工的唯一编号'
+    description: '发票唯一编号'
   },
   {
-    key: 'employeeName',
-    label: '姓名',
-    type: 'string',
-    required: true,
-    description: '员工姓名'
-  },
-  {
-    key: 'department',
-    label: '部门',
-    type: 'string',
-    required: true,
-    description: '所属部门'
-  },
-  {
-    key: 'position',
-    label: '职位',
+    key: 'invoiceCode',
+    label: '发票代码',
     type: 'string',
     required: false,
-    description: '职位名称'
+    description: '发票代码'
   },
   {
-    key: 'email',
-    label: '邮箱',
-    type: 'string',
-    required: false,
-    description: '电子邮箱地址'
-  },
-  {
-    key: 'phone',
-    label: '电话',
-    type: 'string',
-    required: false,
-    description: '联系电话'
-  },
-  {
-    key: 'hireDate',
-    label: '入职日期',
+    key: 'invoiceDate',
+    label: '开票日期',
     type: 'date',
-    required: false,
-    description: '入职时间'
+    required: true,
+    description: '发票开具日期'
   },
   {
-    key: 'salary',
-    label: '薪资',
-    type: 'number',
+    key: 'invoiceType',
+    label: '发票类型',
+    type: 'string',
+    required: true,
+    description: '增值税专用发票、普通发票等'
+  },
+  {
+    key: 'buyerName',
+    label: '购买方名称',
+    type: 'string',
+    required: true,
+    description: '购买方公司名称'
+  },
+  {
+    key: 'buyerTaxNumber',
+    label: '购买方税号',
+    type: 'string',
     required: false,
-    description: '员工薪资'
+    description: '购买方纳税人识别号'
+  },
+  {
+    key: 'sellerName',
+    label: '销售方名称',
+    type: 'string',
+    required: true,
+    description: '销售方公司名称'
+  },
+  {
+    key: 'sellerTaxNumber',
+    label: '销售方税号',
+    type: 'string',
+    required: false,
+    description: '销售方纳税人识别号'
+  },
+  {
+    key: 'totalAmount',
+    label: '合计金额',
+    type: 'number',
+    required: true,
+    description: '不含税金额'
+  },
+  {
+    key: 'taxAmount',
+    label: '税额',
+    type: 'number',
+    required: true,
+    description: '增值税税额'
+  },
+  {
+    key: 'totalWithTax',
+    label: '价税合计',
+    type: 'number',
+    required: true,
+    description: '含税总金额'
+  },
+  {
+    key: 'taxRate',
+    label: '税率',
+    type: 'string',
+    required: false,
+    description: '适用税率'
+  },
+  {
+    key: 'remarks',
+    label: '备注',
+    type: 'string',
+    required: false,
+    description: '发票备注信息'
   }
 ]
 
 /**
- * 产品库存系统字段配置
+ * 凭证系统字段配置
  */
-export const PRODUCT_INVENTORY_FIELDS: SystemField[] = [
+export const VOUCHER_FIELDS: SystemField[] = [
   {
-    key: 'productCode',
-    label: '产品编码',
+    key: 'voucherNumber',
+    label: '凭证号',
     type: 'string',
     required: true,
-    description: '产品的唯一编码'
+    description: '记账凭证编号'
   },
   {
-    key: 'productName',
-    label: '产品名称',
-    type: 'string',
+    key: 'voucherDate',
+    label: '凭证日期',
+    type: 'date',
     required: true,
-    description: '产品的名称'
+    description: '记账日期'
   },
   {
-    key: 'category',
-    label: '产品类别',
+    key: 'voucherType',
+    label: '凭证类型',
     type: 'string',
     required: false,
-    description: '产品所属类别'
+    description: '收款凭证、付款凭证、转账凭证'
   },
-  {
-    key: 'quantity',
-    label: '库存数量',
-    type: 'number',
-    required: true,
-    description: '当前库存数量'
-  },
-  {
-    key: 'unitPrice',
-    label: '单价',
-    type: 'number',
-    required: false,
-    description: '产品单价'
-  },
-  {
-    key: 'unit',
-    label: '单位',
-    type: 'string',
-    required: false,
-    description: '计量单位'
-  },
-  {
-    key: 'warehouse',
-    label: '仓库位置',
-    type: 'string',
-    required: false,
-    description: '存放的仓库位置'
-  },
-  {
-    key: 'supplier',
-    label: '供应商',
-    type: 'string',
-    required: false,
-    description: '产品供应商'
-  }
-]
-
-/**
- * 财务报表系统字段配置
- */
-export const FINANCIAL_STATEMENT_FIELDS: SystemField[] = [
   {
     key: 'accountCode',
     label: '科目编码',
@@ -249,11 +250,11 @@ export const FINANCIAL_STATEMENT_FIELDS: SystemField[] = [
     description: '会计科目名称'
   },
   {
-    key: 'period',
-    label: '期间',
+    key: 'summary',
+    label: '摘要',
     type: 'string',
     required: true,
-    description: '会计期间'
+    description: '业务摘要说明'
   },
   {
     key: 'debitAmount',
@@ -270,18 +271,101 @@ export const FINANCIAL_STATEMENT_FIELDS: SystemField[] = [
     description: '贷方发生额'
   },
   {
-    key: 'balance',
-    label: '余额',
+    key: 'auxiliaryItem',
+    label: '辅助核算',
+    type: 'string',
+    required: false,
+    description: '辅助核算项目'
+  },
+  {
+    key: 'preparedBy',
+    label: '制单人',
+    type: 'string',
+    required: false,
+    description: '凭证制作人'
+  },
+  {
+    key: 'reviewedBy',
+    label: '审核人',
+    type: 'string',
+    required: false,
+    description: '凭证审核人'
+  },
+  {
+    key: 'remarks',
+    label: '备注',
+    type: 'string',
+    required: false,
+    description: '凭证备注信息'
+  }
+]
+
+/**
+ * 财务报表系统字段配置
+ */
+export const FINANCIAL_STATEMENT_FIELDS: SystemField[] = [
+  {
+    key: 'reportDate',
+    label: '报表日期',
+    type: 'date',
+    required: true,
+    description: '财务报表所属期间'
+  },
+  {
+    key: 'reportType',
+    label: '报表类型',
+    type: 'string',
+    required: true,
+    description: '资产负债表、利润表、现金流量表'
+  },
+  {
+    key: 'accountCode',
+    label: '科目编码',
+    type: 'string',
+    required: true,
+    description: '会计科目编码'
+  },
+  {
+    key: 'accountName',
+    label: '科目名称',
+    type: 'string',
+    required: true,
+    description: '会计科目名称'
+  },
+  {
+    key: 'lineNumber',
+    label: '行次',
+    type: 'string',
+    required: false,
+    description: '报表行次'
+  },
+  {
+    key: 'beginningBalance',
+    label: '期初余额',
     type: 'number',
     required: false,
+    description: '期初余额'
+  },
+  {
+    key: 'endingBalance',
+    label: '期末余额',
+    type: 'number',
+    required: true,
     description: '期末余额'
   },
   {
-    key: 'balanceDirection',
-    label: '余额方向',
+    key: 'yearBeginningBalance',
+    label: '年初余额',
+    type: 'number',
+    required: false,
+    description: '年度期初余额'
+  },
+  {
+    key: 'remarks',
+    label: '备注',
     type: 'string',
     required: false,
-    description: '借方或贷方'
+    description: '备注说明'
   }
 ]
 
@@ -290,27 +374,27 @@ export const FINANCIAL_STATEMENT_FIELDS: SystemField[] = [
  */
 export const DATA_IMPORT_SCENARIOS: DataImportScenario[] = [
   {
-    key: 'customer_transaction',
-    name: '客户交易数据',
-    description: '导入客户交易原始数据，包括交易日期、金额、产品等信息',
-    fields: CUSTOMER_TRANSACTION_FIELDS
+    key: 'bank_statement',
+    name: '银行流水',
+    description: '导入银行流水数据，包括交易日期、摘要、借贷金额、余额等',
+    fields: BANK_STATEMENT_FIELDS
   },
   {
-    key: 'employee',
-    name: '员工信息',
-    description: '导入员工基本信息，包括编号、姓名、部门、职位等',
-    fields: EMPLOYEE_FIELDS
+    key: 'invoice',
+    name: '发票',
+    description: '导入发票数据，包括发票号码、开票日期、购销方信息、金额等',
+    fields: INVOICE_FIELDS
   },
   {
-    key: 'product_inventory',
-    name: '产品库存',
-    description: '导入产品库存数据，包括产品编码、名称、库存数量等',
-    fields: PRODUCT_INVENTORY_FIELDS
+    key: 'voucher',
+    name: '凭证',
+    description: '导入会计凭证，包括凭证号、科目、摘要、借贷金额等',
+    fields: VOUCHER_FIELDS
   },
   {
     key: 'financial_statement',
     name: '财务报表',
-    description: '导入财务报表数据，包括科目编码、借贷金额等',
+    description: '导入财务报表数据，包括报表类型、科目、期初期末余额等',
     fields: FINANCIAL_STATEMENT_FIELDS
   }
 ]

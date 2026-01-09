@@ -51,6 +51,14 @@
               </Button>
 
               <Button
+                variant="secondary"
+                @click="generateMockData"
+                :disabled="loading"
+              >
+                生成虚拟数据
+              </Button>
+
+              <Button
                 v-if="rawData.length > 0"
                 variant="outline"
                 @click="clearData"
@@ -250,6 +258,7 @@ import { useMappingTemplates } from '@/composables/useMappingTemplates'
 import { useSavedData } from '@/composables/useSavedData'
 import { DATA_IMPORT_SCENARIOS } from '@/types/system-fields'
 import { Button } from '@/components/ui/button'
+import { toast } from 'vue-sonner'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -349,6 +358,79 @@ const handleFileChange = (event: Event) => {
   if (file) {
     importFromExcel(file)
     target.value = ''
+  }
+}
+
+// 生成虚拟数据
+const generateMockData = () => {
+  if (!selectedScenario.value) {
+    alert('请先选择数据类型')
+    return
+  }
+
+  loading.value = true
+  
+  try {
+    const fields = systemFields.value
+    const mockCount = 50 // 生成50条虚拟数据
+    const mockData: Record<string, any>[] = []
+
+    for (let i = 0; i < mockCount; i++) {
+      const row: Record<string, any> = {}
+      
+      fields.forEach(field => {
+        switch (field.type) {
+          case 'string':
+            if (field.key.includes('Date')) {
+              row[field.label] = new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            } else if (field.key.includes('Number') || field.key.includes('Code')) {
+              row[field.label] = `${field.label.substring(0, 2)}${String(i + 1).padStart(6, '0')}`
+            } else if (field.key.includes('Name')) {
+              row[field.label] = `${field.label}${i + 1}`
+            } else if (field.key.includes('Type')) {
+              const types = ['类型A', '类型B', '类型C']
+              row[field.label] = types[Math.floor(Math.random() * types.length)]
+            } else {
+              row[field.label] = `${field.label}示例${i + 1}`
+            }
+            break
+          case 'number':
+            if (field.key.includes('Amount') || field.key.includes('Balance')) {
+              row[field.label] = Math.round(Math.random() * 100000 * 100) / 100
+            } else if (field.key.includes('Tax')) {
+              row[field.label] = Math.round(Math.random() * 10000 * 100) / 100
+            } else {
+              row[field.label] = Math.round(Math.random() * 1000)
+            }
+            break
+          case 'date':
+            row[field.label] = new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            break
+          default:
+            row[field.label] = `数据${i + 1}`
+        }
+      })
+      
+      mockData.push(row)
+    }
+
+    rawData.value = mockData
+    fileName.value = `${currentScenario.value?.name || '虚拟'}数据_${mockCount}条.xlsx`
+    importedFields.value = Object.keys(mockData[0])
+    
+    // 自动创建字段映射
+    fieldMappings.value = fields.map(field => ({
+      sourceField: field.label,
+      targetField: field.key,
+      targetLabel: field.label
+    }))
+    
+    toast.success(`成功生成 ${mockCount} 条虚拟数据`)
+  } catch (error) {
+    console.error('生成虚拟数据失败:', error)
+    toast.error('生成虚拟数据失败')
+  } finally {
+    loading.value = false
   }
 }
 
