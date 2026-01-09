@@ -219,5 +219,55 @@ export function getDeepSeekClient(): DeepSeekClient {
   return deepSeekClient
 }
 
+/**
+ * 使用AI自动为文件打标签
+ */
+export async function autoTagFiles(files: Array<{
+  fileName: string
+  fileType: string
+  description?: string
+  data?: Record<string, any>[]
+}>): Promise<string[]> {
+  const client = getDeepSeekClient()
+  
+  const prompt = `请分析以下文件信息，为每个文件打上合适的分类标签（如：发票、流水、合同、报表、凭证等）。
+要求：
+1. 每个文件返回1-3个最合适的标签
+2. 标签要简洁明确，2-4个汉字
+3. 只返回JSON数组格式，不要其他说明文字
+
+文件信息：
+${files.map((f, i) => `${i + 1}. 文件名：${f.fileName}
+   文件类型：${f.fileType}
+   ${f.description ? `描述：${f.description}` : ''}
+   ${f.data && f.data.length > 0 ? `数据列：${Object.keys(f.data[0]).join('、')}` : ''}`).join('\n\n')}
+
+请返回格式：
+[
+  ["标签1", "标签2"],  // 第1个文件的标签
+  ["标签1"],          // 第2个文件的标签
+  ...
+]`
+
+  const response = await client.getResponse([
+    { role: 'system', content: '你是一个专业的文件分类助手，擅长根据文件名和内容特征进行准确分类。' },
+    { role: 'user', content: prompt }
+  ])
+
+  try {
+    // 提取JSON数组
+    const jsonMatch = response.match(/\[[\s\S]*\]/)
+    if (jsonMatch) {
+      const tags = JSON.parse(jsonMatch[0]) as string[][]
+      // 扁平化并去重
+      return [...new Set(tags.flat())]
+    }
+  } catch (error) {
+    console.error('解析AI返回的标签失败:', error)
+  }
+
+  return []
+}
+
 export type { Message, DeepSeekRequest, DeepSeekResponse, DeepSeekConfig }
 export { DeepSeekClient }

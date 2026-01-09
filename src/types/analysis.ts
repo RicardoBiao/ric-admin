@@ -28,18 +28,16 @@ export interface AnalysisRecord {
   title: string
   /** 使用的数据记录ID列表 */
   dataRecordIds: string[]
-  /** 数据快照（包含场景、字段等信息） */
+  /** 数据快照（包含批次、文件等信息） */
   dataSnapshot: {
-    scenarioKey: string
-    scenarioName: string
+    batchId: string
+    batchName: string
     fileName: string
-    rowCount: number
-    data: Record<string, any>[]
-    mappings: Array<{
-      sourceField: string
-      targetField: string
-      targetLabel: string
-    }>
+    fileType: string
+    fileSize: number
+    rowCount?: number
+    data?: Record<string, any>[]
+    description?: string
   }[]
   /** 用户的分析诉求 */
   prompt: string

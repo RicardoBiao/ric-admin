@@ -1,11 +1,11 @@
 <template>
   <div class="flex h-screen bg-background">
-    <!-- 左侧侧边栏 -->
+    <!-- 左侧侧边栏 - 按批次显示 -->
     <div class="w-64 border-r bg-card flex flex-col">
       <div class="p-4 border-b">
         <h2 class="text-lg font-semibold">数据管理</h2>
         <p class="text-xs text-muted-foreground mt-1">
-          共 {{ stats.totalRecords }} 条记录
+          共 {{ stats.totalRecords }} 个文件，{{ stats.batchCount }} 个批次
         </p>
       </div>
       
@@ -13,39 +13,54 @@
         <div class="space-y-1">
           <!-- 全部数据 -->
           <button
-            @click="selectScenario(null)"
+            @click="selectBatch(null)"
             :class="[
               'w-full px-3 py-2 text-left rounded-md text-sm transition-colors',
-              selectedScenarioKey === null
+              selectedBatchId === null
                 ? 'bg-primary text-primary-foreground'
                 : 'hover:bg-muted'
             ]"
           >
             <div class="flex items-center justify-between">
-              <span>📊 全部数据</span>
+              <span>📊 全部文件</span>
               <span class="text-xs">{{ stats.totalRecords }}</span>
             </div>
           </button>
 
-          <!-- 按场景分类 -->
+          <!-- 按批次分类 -->
           <div
-            v-for="scenario in scenarios"
-            :key="scenario.key"
+            v-for="batch in batches"
+            :key="batch.id"
+            class="group"
           >
             <button
-              @click="selectScenario(scenario.key)"
+              @click="selectBatch(batch.id)"
               :class="[
                 'w-full px-3 py-2 text-left rounded-md text-sm transition-colors',
-                selectedScenarioKey === scenario.key
+                selectedBatchId === batch.id
                   ? 'bg-primary text-primary-foreground'
                   : 'hover:bg-muted'
               ]"
             >
               <div class="flex items-center justify-between">
-                <span>{{ scenario.name }}</span>
-                <span class="text-xs">
-                  {{ stats.scenarioStats[scenario.key] || 0 }}
-                </span>
+                <span class="truncate flex-1">{{ batch.name }}</span>
+                <div class="flex items-center gap-1">
+                  <button
+                    @click.stop="uploadToBatch(batch.id, batch.name)"
+                    class="opacity-0 group-hover:opacity-100 p-1 hover:bg-background/20 rounded transition-opacity"
+                    title="向该批次添加文件"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                  </button>
+                  <span class="text-xs ml-1">
+                    {{ batch.count }}
+                  </span>
+                </div>
+              </div>
+              <div class="text-xs opacity-75 mt-1">
+                {{ formatDateTime(batch.savedAt) }}
               </div>
             </button>
           </div>
@@ -60,20 +75,29 @@
         <div class="flex items-center justify-between mb-4">
           <div>
             <h1 class="text-2xl font-bold">
-              {{ selectedScenarioKey ? scenarios.find(s => s.key === selectedScenarioKey)?.name : '全部数据' }}
+              {{ selectedBatchId ? batches.find(b => b.id === selectedBatchId)?.name : '全部文件' }}
             </h1>
             <p class="text-sm text-muted-foreground mt-1">
-              共 {{ filteredRecords.length }} 条记录，{{ totalRows }} 行数据
+              共 {{ filteredRecords.length }} 个文件
+              <span v-if="selectedRecords.length > 0" class="ml-2">· 已选中 {{ selectedRecords.length }} 个</span>
             </p>
           </div>
           <div class="flex gap-2">
+            <Button
+              v-if="selectedRecords.length > 0"
+              variant="outline"
+              size="sm"
+              @click="handleAutoTag"
+            >
+              🏷️ AI打标 ({{ selectedRecords.length }})
+            </Button>
             <Button
               v-if="selectedRecords.length > 0"
               variant="default"
               size="sm"
               @click="showAnalysisDialog = true"
             >
-              📊 发送给 DeepSeek 分析 ({{ selectedRecords.length }})
+              📊 DeepSeek 分析 ({{ selectedRecords.length }})
             </Button>
             <Button
               v-if="selectedRecords.length > 0"
@@ -81,13 +105,29 @@
               size="sm"
               @click="handleBatchDelete"
             >
-              删除选中 ({{ selectedRecords.length }})
+              删除 ({{ selectedRecords.length }})
             </Button>
           </div>
         </div>
 
         <!-- 筛选器 -->
-        <div class="flex gap-3">
+        <div class="flex gap-3 items-center">
+          <div class="flex items-center gap-2">
+            <input
+              type="checkbox"
+              :checked="isAllSelected"
+              @change="handleSelectAllClick"
+              id="select-all"
+              class="w-4 h-4 cursor-pointer"
+            />
+            <label 
+              for="select-all" 
+              class="text-sm cursor-pointer"
+              @click.prevent="handleSelectAllClick"
+            >
+              全选 ({{ selectedRecords.length }}/{{ paginatedRecords.length }})
+            </label>
+          </div>
           <Input
             v-model="searchQuery"
             placeholder="搜索文件名..."
@@ -101,14 +141,14 @@
               <SelectItem value="latest">最新保存</SelectItem>
               <SelectItem value="oldest">最早保存</SelectItem>
               <SelectItem value="name">文件名</SelectItem>
-              <SelectItem value="rows">数据行数</SelectItem>
+              <SelectItem value="size">文件大小</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      <!-- 数据列表 -->
-      <div class="flex-1 overflow-y-auto p-4">
+      <!-- 数据列表 - Mac风格列表布局 -->
+      <div class="flex-1 overflow-y-auto flex flex-col">
         <div v-if="paginatedRecords.length === 0" class="text-center py-12">
           <div class="text-muted-foreground">
             <p class="text-lg">暂无数据</p>
@@ -118,63 +158,159 @@
           </div>
         </div>
 
-        <div v-else class="space-y-3">
+        <!-- 表头 -->
+        <div v-else class="sticky top-0 bg-muted/50 border-b z-10">
+          <div class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground">
+            <div class="w-4 flex-shrink-0"><!-- 复选框占位 --></div>
+            <div class="w-10 flex-shrink-0"><!-- 图标占位 --></div>
+            <div class="w-80 flex-shrink-0">文件名称</div>
+            <div class="w-80 flex-shrink-0">标签</div>
+            <div class="flex-1">批次</div>
+            <div class="flex-1">大小</div>
+            <div class="flex-1 text-right">上传时间</div>
+            <div class="w-32 flex-shrink-0"><!-- 操作按钮占位 --></div>
+          </div>
+        </div>
+
+        <!-- 列表内容 -->
+        <div v-if="paginatedRecords.length > 0" class="flex-1 divide-y">
           <div
             v-for="record in paginatedRecords"
             :key="record.id"
-            class="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+            class="flex items-center gap-3 px-4 py-2 hover:bg-muted/50 transition-colors cursor-pointer group"
+            :class="{ 'bg-primary/5': selectedRecords.includes(record.id) }"
+            @click="viewDetails(record)"
           >
-            <div class="flex items-start gap-4">
-              <!-- 复选框 -->
-              <div class="pt-1">
-                <input
-                  type="checkbox"
-                  :checked="selectedRecords.includes(record.id)"
-                  @change="toggleSelection(record.id)"
-                  class="w-4 h-4"
-                />
-              </div>
+            <!-- 复选框 -->
+            <div @click.stop class="flex items-center">
+              <input
+                type="checkbox"
+                :checked="selectedRecords.includes(record.id)"
+                @change="toggleSelection(record.id)"
+                class="w-4 h-4 cursor-pointer"
+              />
+            </div>
 
-              <!-- 主要信息 -->
-              <div class="flex-1">
-                <div class="flex items-start justify-between">
-                  <div>
-                    <h3 class="font-medium">{{ record.fileName }}</h3>
-                    <div class="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                      <span>{{ record.scenarioName }}</span>
-                      <span>·</span>
-                      <span>{{ record.rowCount }} 行数据</span>
-                      <span>·</span>
-                      <span>{{ record.mappings.length }} 个字段</span>
-                      <span>·</span>
-                      <span>{{ formatDateTime(record.savedAt) }}</span>
-                    </div>
-                  </div>
-                  <div class="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      @click="viewDetails(record)"
-                    >
-                      查看
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      @click="exportRecord(record)"
-                    >
-                      导出
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      @click="confirmDelete(record.id)"
-                    >
-                      删除
-                    </Button>
-                  </div>
-                </div>
+            <!-- 文件图标/预览 -->
+            <div class="flex-shrink-0">
+              <!-- 图片缩略图 -->
+              <div v-if="record.fileContent && record.fileType?.startsWith('image/')" 
+                   class="w-10 h-10 rounded overflow-hidden border">
+                <img :src="record.fileContent" class="w-full h-full object-cover" />
               </div>
+              <!-- PDF图标 -->
+              <div v-else-if="record.fileType?.includes('pdf')" 
+                   class="w-10 h-10 rounded bg-red-50 flex items-center justify-center">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+              </div>
+              <!-- Excel图标 -->
+              <div v-else-if="record.fileType?.includes('sheet') || record.fileType?.includes('excel')" 
+                   class="w-10 h-10 rounded bg-green-50 flex items-center justify-center">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+              </div>
+              <!-- 通用文件图标 -->
+              <div v-else class="w-10 h-10 rounded bg-muted flex items-center justify-center">
+                <svg class="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+              </div>
+            </div>
+
+            <!-- 文件信息 -->
+            <div class="w-80 flex-shrink-0">
+              <div class="flex items-center gap-2">
+                <h3 class="font-medium text-sm truncate">
+                  {{ record.fileName }}
+                </h3>
+              </div>
+            </div>
+
+            <!-- 标签 -->
+            <div class="w-80 flex-shrink-0">
+              <div v-if="record.tags && record.tags.length > 0" class="flex gap-1 flex-wrap">
+                <span
+                  v-for="tag in record.tags"
+                  :key="tag"
+                  class="inline-block px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary cursor-pointer hover:bg-primary/20 transition-colors"
+                  @click.stop="editTags(record)"
+                  title="点击编辑标签"
+                >
+                  {{ tag }}
+                </span>
+              </div>
+              <button
+                v-else
+                @click.stop="editTags(record)"
+                class="text-xs text-muted-foreground hover:text-primary transition-colors"
+                title="添加标签"
+              >
+                + 添加
+              </button>
+            </div>
+
+            <!-- 批次 -->
+            <div class="flex-1">
+              <div class="text-xs text-muted-foreground truncate" :title="record.batchName">
+                {{ record.batchName }}
+              </div>
+            </div>
+
+            <!-- 文件大小 -->
+            <div class="flex-1">
+              <div class="text-xs text-muted-foreground">
+                {{ formatFileSize(record.fileSize) }}
+                <span v-if="record.rowCount" class="block">
+                  {{ record.rowCount }}行
+                </span>
+              </div>
+            </div>
+
+            <!-- 修改时间 -->
+            <div class="text-xs text-muted-foreground flex-1 text-right">
+              {{ formatDateTime(record.savedAt) }}
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity w-32 flex-shrink-0" @click.stop>
+              <Button
+                size="sm"
+                variant="ghost"
+                class="h-8 w-8 p-0"
+                @click="viewDetails(record)"
+                title="查看"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+              </Button>
+              <Button
+                v-if="record.data"
+                size="sm"
+                variant="ghost"
+                class="h-8 w-8 p-0"
+                @click="exportRecord(record)"
+                title="导出"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                class="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                @click="confirmDelete(record.id)"
+                title="删除"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </Button>
             </div>
           </div>
         </div>
@@ -231,43 +367,41 @@
             <!-- 基本信息 -->
             <div class="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span class="text-muted-foreground">场景类型：</span>
-                <span class="font-medium">{{ selectedRecord.scenarioName }}</span>
+                <span class="text-muted-foreground">批次名称：</span>
+                <span class="font-medium">{{ selectedRecord.batchName }}</span>
               </div>
               <div>
                 <span class="text-muted-foreground">保存时间：</span>
                 <span class="font-medium">{{ formatDateTime(selectedRecord.savedAt) }}</span>
               </div>
               <div>
+                <span class="text-muted-foreground">文件大小：</span>
+                <span class="font-medium">{{ formatFileSize(selectedRecord.fileSize) }}</span>
+              </div>
+              <div>
+                <span class="text-muted-foreground">文件类型：</span>
+                <span class="font-medium">{{ selectedRecord.fileType || '未知' }}</span>
+              </div>
+              <div v-if="selectedRecord.rowCount">
                 <span class="text-muted-foreground">数据行数：</span>
                 <span class="font-medium">{{ selectedRecord.rowCount }} 行</span>
               </div>
-              <div>
-                <span class="text-muted-foreground">字段数量：</span>
-                <span class="font-medium">{{ selectedRecord.mappings.length }} 个</span>
+              <div v-if="selectedRecord.description">
+                <span class="text-muted-foreground">描述：</span>
+                <span class="font-medium">{{ selectedRecord.description }}</span>
               </div>
             </div>
 
-            <!-- 字段映射 -->
-            <div>
-              <h4 class="font-medium mb-2">字段映射</h4>
-              <div class="border rounded-lg p-3 bg-muted/30">
-                <div class="grid grid-cols-2 gap-2 text-sm">
-                  <div
-                    v-for="mapping in selectedRecord.mappings"
-                    :key="mapping.targetField"
-                    class="flex items-center gap-2"
-                  >
-                    <span class="text-muted-foreground">{{ mapping.sourceField }}</span>
-                    <span>→</span>
-                    <span class="font-medium">{{ mapping.targetLabel || mapping.targetField }}</span>
-                  </div>
-                </div>
+            <!-- 图片预览 -->
+            <div v-if="selectedRecord.fileContent && selectedRecord.fileType?.startsWith('image/')">
+              <h4 class="font-medium mb-2">图片预览</h4>
+              <div class="border rounded-lg p-4 bg-muted/30">
+                <img :src="selectedRecord.fileContent" class="max-w-full max-h-[400px] rounded" />
               </div>
             </div>
 
-            <!-- 数据预览 -->
-            <div>
+            <!-- 数据预览(仅Excel) -->
+            <div v-if="selectedRecord.data && selectedRecord.data.length > 0">
               <h4 class="font-medium mb-2">数据预览（前10条）</h4>
               <div class="border rounded-lg overflow-hidden">
                 <div class="max-h-[300px] overflow-auto">
@@ -276,11 +410,11 @@
                       <tr>
                         <th class="px-3 py-2 text-left font-medium">#</th>
                         <th
-                          v-for="mapping in selectedRecord.mappings"
-                          :key="mapping.targetField"
+                          v-for="(key, index) in Object.keys(selectedRecord.data[0])"
+                          :key="index"
                           class="px-3 py-2 text-left font-medium"
                         >
-                          {{ mapping.targetLabel || mapping.targetField }}
+                          {{ key }}
                         </th>
                       </tr>
                     </thead>
@@ -292,11 +426,11 @@
                       >
                         <td class="px-3 py-2 text-muted-foreground">{{ index + 1 }}</td>
                         <td
-                          v-for="mapping in selectedRecord.mappings"
-                          :key="mapping.targetField"
+                          v-for="(key, keyIndex) in Object.keys(row)"
+                          :key="keyIndex"
                           class="px-3 py-2"
                         >
-                          {{ row[mapping.targetField] }}
+                          {{ row[key] }}
                         </td>
                       </tr>
                     </tbody>
@@ -315,13 +449,13 @@
         <DialogHeader>
           <DialogTitle>DeepSeek 数据分析</DialogTitle>
           <DialogDescription>
-            已选择 {{ selectedDataForAnalysis.length }} 条记录，共 {{ totalSelectedRows }} 行数据
+            已选择 {{ selectedDataForAnalysis.length }} 个文件
           </DialogDescription>
         </DialogHeader>
         <div class="space-y-4">
           <!-- 数据预览 -->
           <div>
-            <h4 class="text-sm font-medium mb-2">选中的数据</h4>
+            <h4 class="text-sm font-medium mb-2">选中的文件</h4>
             <div class="border rounded-lg p-3 bg-muted/30 max-h-32 overflow-y-auto">
               <div class="space-y-1 text-sm">
                 <div
@@ -331,7 +465,7 @@
                 >
                   <span>{{ record.fileName }}</span>
                   <span class="text-xs text-muted-foreground">
-                    {{ record.scenarioName }} · {{ record.rowCount }} 行
+                    {{ record.batchName }} · {{ formatFileSize(record.fileSize) }}
                   </span>
                 </div>
               </div>
@@ -484,9 +618,94 @@
     </div>
 
     <!-- 数据导入侧滑组件 -->
-    <DataImportSheet
+    <FileImportSheet
       v-model:open="showImportSheet"
+      :batch-id="uploadBatchId"
+      :batch-name="uploadBatchName"
       @saved="handleDataImported"
+    />
+
+    <!-- 标签编辑对话框 -->
+    <Dialog v-model:open="showTagsDialog">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle>编辑标签</DialogTitle>
+          <DialogDescription>
+            为文件添加分类标签，多个标签用空格或逗号分隔
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="space-y-4">
+          <!-- 当前标签 -->
+          <div v-if="editingRecord">
+            <label class="text-sm font-medium mb-2 block">当前标签</label>
+            <div class="flex flex-wrap gap-2">
+              <span
+                v-for="(tag, index) in editingTags"
+                :key="index"
+                class="inline-flex items-center gap-1 px-2 py-1 text-sm rounded-full bg-primary/10 text-primary"
+              >
+                {{ tag }}
+                <button
+                  @click="removeTag(index)"
+                  class="hover:text-destructive"
+                >
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </span>
+              <span v-if="editingTags.length === 0" class="text-sm text-muted-foreground">
+                暂无标签
+              </span>
+            </div>
+          </div>
+
+          <!-- 添加新标签 -->
+          <div>
+            <label class="text-sm font-medium mb-2 block">添加标签</label>
+            <div class="flex gap-2">
+              <Input
+                v-model="newTag"
+                placeholder="输入标签名称"
+                @keyup.enter="addNewTag"
+              />
+              <Button @click="addNewTag">添加</Button>
+            </div>
+          </div>
+
+          <!-- 推荐标签 -->
+          <div v-if="sortedTags.length > 0">
+            <label class="text-sm font-medium mb-2 block">推荐标签（点击添加）</label>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="tag in sortedTags.slice(0, 10)"
+                :key="tag.name"
+                @click="addExistingTag(tag.name)"
+                :disabled="editingTags.includes(tag.name)"
+                class="px-2 py-1 text-xs rounded-full border transition-colors"
+                :class="editingTags.includes(tag.name) 
+                  ? 'bg-muted text-muted-foreground cursor-not-allowed' 
+                  : 'hover:bg-primary/10 hover:border-primary'"
+              >
+                {{ tag.name }} ({{ tag.count }})
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-4">
+          <Button variant="outline" @click="showTagsDialog = false">取消</Button>
+          <Button @click="saveTags">保存</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    <!-- PDF 查看器 -->
+    <PdfViewer
+      v-model:open="showPdfViewer"
+      :file-name="pdfViewerData.fileName"
+      :file-content="pdfViewerData.fileContent"
     />
   </div>
 </template>
@@ -495,13 +714,15 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSavedData } from '@/composables/useSavedData'
+import { useTags } from '@/composables/useTags'
 import { useAnalysisPrompts, useAnalysisRecords } from '@/composables/useAnalysis'
 import type { SavedDataRecord } from '@/composables/useSavedData'
-import { DATA_IMPORT_SCENARIOS } from '@/types/system-fields'
-import DataImportSheet from '@/components/DataImportSheet.vue'
+import FileImportSheet from '@/components/FileImportSheet.vue'
+import PdfViewer from '@/components/PdfViewer.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -518,18 +739,27 @@ import {
 } from '@/components/ui/dialog'
 import * as XLSX from 'xlsx'
 import { toast } from 'vue-sonner'
-import { getDeepSeekClient } from '@/api/deepseek'
-import { useChartGenerator } from '@/composables/useChartGenerator'
+import { getDeepSeekClient, autoTagFiles } from '@/api/deepseek'
 import { parseChartsFromDeepSeek } from '@/utils/chartParser'
 
 const router = useRouter()
 
 const {
   records,
+  getBatches,
   getStats,
   deleteRecord,
-  deleteRecords
+  deleteRecords,
+  updateRecordTags,
+  getStorageInfo
 } = useSavedData()
+
+const {
+  tags,
+  sortedTags,
+  addTag,
+  incrementTagCount
+} = useTags()
 
 const {
   templates: promptTemplates,
@@ -541,26 +771,37 @@ const {
   createRecord: createAnalysisRecord
 } = useAnalysisRecords()
 
-const { generateFinancialCharts } = useChartGenerator()
-
-const scenarios = DATA_IMPORT_SCENARIOS
+// 批次列表
+const batches = computed(() => getBatches())
 
 // 筛选和排序
-const selectedScenarioKey = ref<string | null>(null)
+const selectedBatchId = ref<string | null>(null)
 const searchQuery = ref('')
 const sortBy = ref('latest')
 const selectedRecords = ref<string[]>([])
 
 // 分页
 const currentPage = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(20) // 网格布局下增加每页数量
 
 // 详情
 const showDetails = ref(false)
 const selectedRecord = ref<SavedDataRecord | null>(null)
 
+// PDF 查看
+const showPdfViewer = ref(false)
+const pdfViewerData = ref<{ fileName: string; fileContent: string }>({ fileName: '', fileContent: '' })
+
+// 标签编辑
+const showTagsDialog = ref(false)
+const editingRecord = ref<SavedDataRecord | null>(null)
+const editingTags = ref<string[]>([])
+const newTag = ref('')
+
 // 导入侧滑
 const showImportSheet = ref(false)
+const uploadBatchId = ref<string | undefined>(undefined)
+const uploadBatchName = ref<string | undefined>(undefined)
 
 // 分析对话框
 const showAnalysisDialog = ref(false)
@@ -570,24 +811,25 @@ const analyzing = ref(false)
 const showSavePromptDialog = ref(false)
 const promptTemplateName = ref('')
 
+// 自动打标
+const autoTagging = ref(false)
+
 // 统计信息
-const stats = getStats()
+const stats = computed(() => getStats())
 
 // 数据导入完成后刷新列表
 const handleDataImported = () => {
-  // 强制刷新统计信息
-  Object.assign(stats, getStats())
-  // 如果当前选中了场景，需要刷新过滤后的记录
-  if (selectedScenarioKey.value) {
-    // 触发计算属性重新计算
-    currentPage.value = 1
-  }
-  toast.success('数据已导入并保存')
+  currentPage.value = 1
+  selectedRecords.value = []
+  // 重置上传批次参数
+  uploadBatchId.value = undefined
+  uploadBatchName.value = undefined
+  toast.success('文件已导入并保存')
 }
 
-// 选择场景
-const selectScenario = (scenarioKey: string | null) => {
-  selectedScenarioKey.value = scenarioKey
+// 选择批次
+const selectBatch = (batchId: string | null) => {
+  selectedBatchId.value = batchId
   currentPage.value = 1
   selectedRecords.value = []
 }
@@ -596,9 +838,9 @@ const selectScenario = (scenarioKey: string | null) => {
 const filteredRecords = computed(() => {
   let filtered = records.value
 
-  // 按场景筛选
-  if (selectedScenarioKey.value) {
-    filtered = filtered.filter(r => r.scenarioKey === selectedScenarioKey.value)
+  // 按批次筛选
+  if (selectedBatchId.value) {
+    filtered = filtered.filter(r => r.batchId === selectedBatchId.value)
   }
 
   // 按文件名搜索
@@ -618,19 +860,14 @@ const filteredRecords = computed(() => {
         return new Date(a.savedAt).getTime() - new Date(b.savedAt).getTime()
       case 'name':
         return a.fileName.localeCompare(b.fileName)
-      case 'rows':
-        return b.rowCount - a.rowCount
+      case 'size':
+        return b.fileSize - a.fileSize
       default:
         return 0
     }
   })
 
   return filtered
-})
-
-// 总行数
-const totalRows = computed(() => {
-  return filteredRecords.value.reduce((sum, r) => sum + r.rowCount, 0)
 })
 
 // 分页计算
@@ -672,24 +909,237 @@ const formatDateTime = (isoString: string) => {
   return date.toLocaleString('zh-CN')
 }
 
+// 格式化文件大小
+const formatFileSize = (bytes: number) => {
+  if (!bytes || bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+}
+
 // 选中用于分析的数据记录
 const selectedDataForAnalysis = computed(() => {
   return records.value.filter(r => selectedRecords.value.includes(r.id))
 })
 
-// 选中数据的总行数
-const totalSelectedRows = computed(() => {
-  return selectedDataForAnalysis.value.reduce((sum, r) => sum + r.rowCount, 0)
-})
-
 // 选择/取消选择
 const toggleSelection = (id: string) => {
+  console.log('[toggleSelection 调用]', { 
+    id, 
+    当前数组: selectedRecords.value,
+    数组长度: selectedRecords.value.length 
+  })
+  
   const index = selectedRecords.value.indexOf(id)
+  console.log('[indexOf 结果]', { index })
+  
   if (index >= 0) {
     selectedRecords.value.splice(index, 1)
+    console.log('[取消选择完成]', { 
+      id, 
+      剩余数组: selectedRecords.value,
+      剩余长度: selectedRecords.value.length 
+    })
   } else {
     selectedRecords.value.push(id)
+    console.log('[添加选择完成]', { 
+      id, 
+      新数组: selectedRecords.value,
+      新长度: selectedRecords.value.length 
+    })
   }
+  
+  // 强制触发响应式更新
+  console.log('[强制检查] selectedRecords.value.length =', selectedRecords.value.length)
+}
+
+// 全选/取消全选 - 简化版本
+const isAllSelected = computed(() => {
+  if (paginatedRecords.value.length === 0) return false
+  
+  // 检查当前页的所有记录是否都被选中
+  const currentPageIds = paginatedRecords.value.map(r => r.id)
+  const allSelected = currentPageIds.every(id => selectedRecords.value.includes(id))
+  
+  console.log('[全选状态检查]', {
+    当前页数量: paginatedRecords.value.length,
+    总选中数量: selectedRecords.value.length,
+    当前页ID: currentPageIds,
+    是否全选: allSelected
+  })
+  
+  return allSelected
+})
+
+const toggleSelectAll = (checked: boolean | string) => {
+  console.log('[toggleSelectAll] 开始', { 
+    checked, 
+    type: typeof checked,
+    转换为布尔: Boolean(checked)
+  })
+  
+  const currentPageIds = paginatedRecords.value.map(r => r.id)
+  
+  if (checked) {
+    // 全选：添加当前页所有ID到选中列表
+    console.log('[执行全选] 当前页ID:', currentPageIds)
+    currentPageIds.forEach(id => {
+      if (!selectedRecords.value.includes(id)) {
+        selectedRecords.value.push(id)
+      }
+    })
+    console.log('[全选完成] 选中数量:', selectedRecords.value.length)
+  } else {
+    // 取消全选：从选中列表移除当前页所有ID
+    console.log('[执行取消全选] 移除ID:', currentPageIds)
+    selectedRecords.value = selectedRecords.value.filter(id => !currentPageIds.includes(id))
+    console.log('[取消全选完成] 剩余数量:', selectedRecords.value.length)
+  }
+}
+
+// 点击标签触发全选
+const handleSelectAllClick = () => {
+  console.log('[handleSelectAllClick] 点击全选标签')
+  const shouldSelectAll = !isAllSelected.value
+  console.log('[handleSelectAllClick] 应该全选?', shouldSelectAll)
+  
+  const currentPageIds = paginatedRecords.value.map(r => r.id)
+  
+  if (shouldSelectAll) {
+    // 全选当前页
+    currentPageIds.forEach(id => {
+      if (!selectedRecords.value.includes(id)) {
+        selectedRecords.value.push(id)
+      }
+    })
+    console.log('[手动全选完成] 已选中:', selectedRecords.value.length)
+  } else {
+    // 取消全选当前页
+    selectedRecords.value = selectedRecords.value.filter(id => !currentPageIds.includes(id))
+    console.log('[手动取消全选完成] 剩余:', selectedRecords.value.length)
+  }
+}
+
+// AI 自动打标
+const handleAutoTag = async () => {
+  if (selectedRecords.value.length === 0) {
+    toast.error('请先选择文件')
+    return
+  }
+
+  autoTagging.value = true
+
+  try {
+    const selectedFiles = records.value.filter(r => selectedRecords.value.includes(r.id))
+    toast.info(`正在为 ${selectedFiles.length} 个文件进行AI分类标注...`)
+    
+    let successCount = 0
+    
+    // 逐个文件调用AI打标
+    for (const file of selectedFiles) {
+      try {
+        const fileInfo = [{
+          fileName: file.fileName,
+          fileType: file.fileType,
+          description: file.description,
+          data: file.data
+        }]
+        
+        const fileTags = await autoTagFiles(fileInfo)
+        
+        if (fileTags.length > 0) {
+          // 添加标签到标签库
+          fileTags.forEach(tag => {
+            if (!tags.value.find(t => t.name === tag)) {
+              addTag(tag)
+            }
+          })
+          
+          // 为该文件打标
+          updateRecordTags(file.id, fileTags)
+          successCount++
+        }
+      } catch (error) {
+        console.error(`为文件 ${file.fileName} 打标失败:`, error)
+      }
+    }
+    
+    if (successCount > 0) {
+      toast.success(`成功为 ${successCount} 个文件完成AI分类标注`)
+      selectedRecords.value = []
+    } else {
+      toast.error('AI未能识别合适的标签')
+    }
+  } catch (error) {
+    console.error('自动打标失败:', error)
+    toast.error('自动打标失败，请检查DeepSeek配置')
+  } finally {
+    autoTagging.value = false
+  }
+}
+
+// 编辑标签
+const editTags = (record: SavedDataRecord) => {
+  editingRecord.value = record
+  editingTags.value = [...(record.tags || [])]
+  newTag.value = ''
+  showTagsDialog.value = true
+}
+
+// 添加新标签
+const addNewTag = () => {
+  const tag = newTag.value.trim()
+  if (!tag) return
+  
+  if (editingTags.value.includes(tag)) {
+    toast.error('标签已存在')
+    return
+  }
+  
+  editingTags.value.push(tag)
+  newTag.value = ''
+}
+
+// 添加已有标签
+const addExistingTag = (tag: string) => {
+  if (!editingTags.value.includes(tag)) {
+    editingTags.value.push(tag)
+  }
+}
+
+// 移除标签
+const removeTag = (index: number) => {
+  editingTags.value.splice(index, 1)
+}
+
+// 保存标签
+const saveTags = () => {
+  if (!editingRecord.value) return
+  
+  // 更新记录标签
+  updateRecordTags(editingRecord.value.id, editingTags.value)
+  
+  // 将新标签添加到标签库
+  editingTags.value.forEach(tag => {
+    if (!tags.value.find(t => t.name === tag)) {
+      addTag(tag)
+    } else {
+      incrementTagCount(tag)
+    }
+  })
+  
+  toast.success('标签已更新')
+  showTagsDialog.value = false
+  editingRecord.value = null
+  editingTags.value = []
+}
+
+// 向批次上传文件
+const uploadToBatch = (batchId: string, batchName: string) => {
+  uploadBatchId.value = batchId
+  uploadBatchName.value = batchName
+  showImportSheet.value = true
 }
 
 // 应用诉求模板
@@ -731,24 +1181,34 @@ const handleSubmitAnalysis = async () => {
   try {
     // 准备数据给 DeepSeek
     const dataContext = selectedDataForAnalysis.value.map(record => {
-      const fields = record.mappings.map(m => m.targetLabel || m.targetField).join('、')
-      return `
-数据文件：${record.fileName}
-场景类型：${record.scenarioName}
+      let context = `
+文件名：${record.fileName}
+批次：${record.batchName}
+文件类型：${record.fileType || '未知'}
+文件大小：${formatFileSize(record.fileSize)}
+`
+      
+      // 如果是 Excel 数据，添加数据预览
+      if (record.data && record.data.length > 0) {
+        const fields = Object.keys(record.data[0]).join('、')
+        context += `
 数据行数：${record.rowCount}
 字段列表：${fields}
 
 数据预览（前5条）：
 ${JSON.stringify(record.data.slice(0, 5), null, 2)}
 `
+      }
+
+      return context
     }).join('\n---\n')
 
-    const prompt = `你是一个专业的财务数据分析师。请根据以下数据和用户的分析诉求，提供详细的分析报告和可视化图表。
+    const prompt = `你是一个专业的数据分析师。请根据以下文件和用户的分析诉求，提供详细的分析报告和可视化图表。
 
 用户诉求：
 ${analysisPrompt.value}
 
-数据信息：
+文件信息：
 ${dataContext}
 
 **请按以下格式输出：**
@@ -805,22 +1265,8 @@ ${dataContext}
       () => {
           const duration = Date.now() - startTime
 
-          // 首先尝试从 DeepSeek 响应中解析图表配置
-          let charts = parseChartsFromDeepSeek(result)
-          
-          // 如果 DeepSeek 没有返回有效的图表配置，使用自动生成
-          if (charts.length === 0) {
-            console.log('No charts from DeepSeek, using auto-generated charts')
-            charts = generateFinancialCharts(selectedDataForAnalysis.value.map(r => ({
-              scenarioKey: r.scenarioKey,
-              scenarioName: r.scenarioName,
-              data: r.data,
-              mappings: r.mappings.map(m => ({
-                targetField: m.targetField,
-                targetLabel: m.targetLabel || m.targetField
-              }))
-            })))
-          }
+          // 尝试从 DeepSeek 响应中解析图表配置
+          const charts = parseChartsFromDeepSeek(result)
 
           // 保存分析记录
           const analysisRecord = createAnalysisRecord(
@@ -860,16 +1306,31 @@ ${dataContext}
 // 查看详情
 const viewDetails = (record: SavedDataRecord) => {
   selectedRecord.value = record
-  showDetails.value = true
+  
+  // 如果是PDF文件，使用PDF查看器
+  if (record.fileType?.includes('pdf') && record.fileContent) {
+    pdfViewerData.value = {
+      fileName: record.fileName,
+      fileContent: record.fileContent
+    }
+    showPdfViewer.value = true
+  } else {
+    showDetails.value = true
+  }
 }
 
 // 导出记录
 const exportRecord = (record: SavedDataRecord) => {
+  if (!record.data || record.data.length === 0) {
+    toast.error('该文件不包含表格数据，无法导出')
+    return
+  }
+
   const ws = XLSX.utils.json_to_sheet(record.data)
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Data')
   
-  const fileName = `${record.fileName.replace('.xlsx', '')}_exported_${Date.now()}.xlsx`
+  const fileName = `${(record.fileName || 'data').replace('.xlsx', '')}_exported_${Date.now()}.xlsx`
   XLSX.writeFile(wb, fileName)
   toast.success('数据已导出')
 }
@@ -893,5 +1354,11 @@ const handleBatchDelete = () => {
 
 onMounted(() => {
   // 数据已在 composable 中自动加载
+  // 显示存储使用情况
+  const storageInfo = getStorageInfo()
+  if (storageInfo) {
+    console.log('[存储使用情况]', storageInfo)
+    console.log(`存储: ${storageInfo.sizeInMB} MB (${storageInfo.usagePercent}%)，共 ${storageInfo.records} 条记录`)
+  }
 })
 </script>

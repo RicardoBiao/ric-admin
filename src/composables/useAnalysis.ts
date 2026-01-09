@@ -5,7 +5,6 @@
 import { ref, computed } from 'vue'
 import type { AnalysisPromptTemplate, AnalysisRecord, ChartConfig } from '@/types/analysis'
 import type { SavedDataRecord } from './useSavedData'
-import type { FieldMapping } from '@/types/system-fields'
 
 const TEMPLATES_KEY = 'analysis_prompt_templates'
 const RECORDS_KEY = 'analysis_records'
@@ -145,16 +144,14 @@ export function useAnalysisRecords() {
       title,
       dataRecordIds: dataRecords.map(r => r.id),
       dataSnapshot: dataRecords.map(r => ({
-        scenarioKey: r.scenarioKey,
-        scenarioName: r.scenarioName,
+        batchId: r.batchId,
+        batchName: r.batchName,
         fileName: r.fileName,
+        fileType: r.fileType,
+        fileSize: r.fileSize,
         rowCount: r.rowCount,
         data: r.data,
-        mappings: r.mappings.map((m: FieldMapping) => ({
-          sourceField: m.sourceField,
-          targetField: m.targetField,
-          targetLabel: m.targetLabel || m.targetField
-        }))
+        description: r.description
       })),
       prompt,
       result,

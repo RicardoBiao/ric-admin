@@ -67,7 +67,7 @@
                 </span>
                 <span>📊 {{ currentRecord.dataSnapshot.length }} 个数据源</span>
                 <span>
-                  {{ currentRecord.dataSnapshot.reduce((sum, d) => sum + d.rowCount, 0) }} 行数据
+                  {{ currentRecord.dataSnapshot.reduce((sum, d) => sum + (d.rowCount || 0), 0) }} 行数据
                 </span>
                 <span v-if="currentRecord.hasCharts" class="text-green-600">
                   📈 {{ currentRecord.charts?.length || 0 }} 个图表
@@ -140,37 +140,38 @@
                     <div>
                       <span class="font-medium">{{ snapshot.fileName }}</span>
                       <span class="text-xs text-muted-foreground ml-2">
-                        {{ snapshot.scenarioName }}
+                        {{ snapshot.batchName }}
                       </span>
                     </div>
                     <span class="text-xs text-muted-foreground">
-                      {{ snapshot.rowCount }} 行
+                      {{ snapshot.rowCount || 0 }} 行
                     </span>
                   </div>
                 </div>
                 <div class="p-4">
-                  <div class="text-xs text-muted-foreground mb-2">
-                    字段：{{ snapshot.mappings.map(m => m.targetLabel).join('、') }}
+                  <div v-if="snapshot.data && snapshot.data.length > 0" class="text-xs text-muted-foreground mb-2">
+                    字段：{{ Object.keys(snapshot.data[0]).join('、') }}
                   </div>
                   <Button
+                    v-if="snapshot.data && snapshot.data.length > 0"
                     variant="outline"
                     size="sm"
                     @click="toggleDataPreview(index)"
                   >
                     {{ expandedData[index] ? '收起' : '展开' }}数据预览
                   </Button>
-                  <div v-if="expandedData[index]" class="mt-3 border rounded-lg overflow-hidden">
+                  <div v-if="expandedData[index] && snapshot.data && snapshot.data.length > 0" class="mt-3 border rounded-lg overflow-hidden">
                     <div class="max-h-60 overflow-auto">
                       <table class="w-full text-xs">
                         <thead class="bg-muted sticky top-0">
                           <tr>
                             <th class="px-2 py-1 text-left">#</th>
                             <th
-                              v-for="mapping in snapshot.mappings"
-                              :key="mapping.targetField"
+                              v-for="field in Object.keys(snapshot.data[0])"
+                              :key="field"
                               class="px-2 py-1 text-left"
                             >
-                              {{ mapping.targetLabel }}
+                              {{ field }}
                             </th>
                           </tr>
                         </thead>
@@ -182,16 +183,19 @@
                           >
                             <td class="px-2 py-1 text-muted-foreground">{{ rowIndex + 1 }}</td>
                             <td
-                              v-for="mapping in snapshot.mappings"
-                              :key="mapping.targetField"
+                              v-for="field in Object.keys(snapshot.data[0])"
+                              :key="field"
                               class="px-2 py-1"
                             >
-                              {{ row[mapping.targetField] }}
+                              {{ row[field] }}
                             </td>
                           </tr>
                         </tbody>
                       </table>
                     </div>
+                  </div>
+                  <div v-else class="text-xs text-muted-foreground">
+                    此文件不包含表格数据
                   </div>
                 </div>
               </div>
@@ -235,7 +239,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAnalysisRecords } from '@/composables/useAnalysis'
-import { useChartGenerator } from '@/composables/useChartGenerator'
 import { Button } from '@/components/ui/button'
 import { toast } from 'vue-sonner'
 import { marked } from 'marked'
@@ -267,8 +270,7 @@ use([
 const route = useRoute()
 const router = useRouter()
 
-const { records, deleteRecord, updateCharts } = useAnalysisRecords()
-const { generateFinancialCharts } = useChartGenerator()
+const { records, deleteRecord } = useAnalysisRecords()
 
 const selectedRecordId = ref<string | null>(null)
 const expandedData = ref<Record<number, boolean>>({})
@@ -321,27 +323,10 @@ const renderMarkdown = (markdown: string) => {
   }
 }
 
-// 生成图表
+// 生成图表（已禁用 - 批次模式不支持自动图表生成）
 const handleGenerateCharts = () => {
   if (!currentRecord.value) return
-
-  generatingCharts.value = true
-  
-  try {
-    const charts = generateFinancialCharts(currentRecord.value.dataSnapshot)
-    
-    if (charts.length > 0) {
-      updateCharts(currentRecord.value.id, charts)
-      toast.success(`成功生成 ${charts.length} 个图表`)
-    } else {
-      toast.warning('当前数据无法生成图表，请确保数据包含必要的字段')
-    }
-  } catch (error) {
-    console.error('生成图表失败:', error)
-    toast.error('生成图表失败')
-  } finally {
-    generatingCharts.value = false
-  }
+  toast.info('批次模式下，请在分析时直接让 DeepSeek 生成图表')
 }
 
 // 删除记录
