@@ -34,79 +34,68 @@ class ApiClient {
 
   private async request<T>(
     url: string,
-    options: RequestInit = {}
+    method: string = 'GET',
+    data?: any,
+    params?: Record<string, any>
   ): Promise<ApiResponse<T>> {
     const fullUrl = `${this.baseURL}${url}`
     
-    const defaultOptions: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    }
-
     // 添加认证 token（如果存在）
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('accessToken')
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    
     if (token) {
-      defaultOptions.headers = {
-        ...defaultOptions.headers,
-        'Authorization': `Bearer ${token}`,
-      }
+      headers['Authorization'] = `Bearer ${token}`
     }
 
     try {
       const response = await axios({
         url: fullUrl,
-        method: defaultOptions.method || 'GET',
-        headers: defaultOptions.headers,
-        data: defaultOptions.body ? JSON.parse(defaultOptions.body as string) : undefined,
-        ...(options as any),
+        method,
+        headers,
+        data,
+        params,
       })
 
       return response.data
-    } catch (error) {
+    } catch (error: any) {
       console.error('API request failed:', error)
-      throw error
+      // 返回错误响应格式
+      if (error.response?.data) {
+        throw error.response.data
+      }
+      throw {
+        code: error.response?.status || 500,
+        message: error.message || 'Request failed',
+        data: null
+      }
     }
   }
 
   async get<T>(url: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
-    const searchParams = new URLSearchParams()
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          searchParams.append(key, String(value))
-        }
-      })
-    }
-    
-    const queryString = searchParams.toString()
-    const fullUrl = queryString ? `${url}?${queryString}` : url
-    
-    return this.request<T>(fullUrl, { method: 'GET' })
+    return this.request<T>(url, 'GET', undefined, params)
   }
 
   async post<T>(url: string, data?: any): Promise<ApiResponse<T>> {
-    return this.request<T>(url, {
-      method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
-    })
+    return this.request<T>(url, 'POST', data)
   }
 
   async put<T>(url: string, data?: any): Promise<ApiResponse<T>> {
-    return this.request<T>(url, {
-      method: 'PUT',
-      body: data ? JSON.stringify(data) : undefined,
-    })
+    return this.request<T>(url, 'PUT', data)
   }
 
   async delete<T>(url: string): Promise<ApiResponse<T>> {
-    return this.request<T>(url, { method: 'DELETE' })
+    return this.request<T>(url, 'DELETE')
   }
 }
 
 // 导出 API 客户端实例
 export const apiClient = new ApiClient()
 
-// 导出便捷方法
-export const { get, post, put, delete: del } = apiClient
+// 导出便捷方法（绑定 this）
+export const get = apiClient.get.bind(apiClient)
+export const post = apiClient.post.bind(apiClient)
+export const put = apiClient.put.bind(apiClient)
+export const del = apiClient.delete.bind(apiClient)

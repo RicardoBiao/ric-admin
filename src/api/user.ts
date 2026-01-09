@@ -1,20 +1,19 @@
 import { apiClient, type PaginationParams, type PaginationResponse } from './index'
 
-// 用户数据类型
+// 用户数据类型（对应后端）
 export interface User {
   id: number
-  username: string
-  email: string
   name: string
-  avatar: string
-  role: string
-  status: string
-  phone: string
-  department: string
-  position: string
-  createTime: string
-  lastLoginTime: string
-  permissions: string[]
+  email: string
+  phone?: string
+  role: string // admin, user, guest
+  status: string // active, inactive
+  department?: string
+  position?: string
+  avatar?: string
+  lastLoginAt?: string
+  createdAt: string
+  updatedAt: string
 }
 
 // 登录参数
@@ -26,7 +25,7 @@ export interface LoginParams {
 // 登录响应
 export interface LoginResponse {
   token: string
-  user: Pick<User, 'id' | 'username' | 'email' | 'name' | 'avatar' | 'role' | 'permissions'>
+  user: Pick<User, 'id' | 'name' | 'email' | 'role'>
 }
 
 // 用户查询参数
@@ -61,12 +60,32 @@ export class UserApi {
 
   // 获取用户列表
   static async getUsers(params?: UserQueryParams) {
-    return apiClient.get<PaginationResponse<User>>('/users', params)
+    return apiClient.get<PaginationResponse<User>>('/users/list', params)
+  }
+
+  // 获取单个用户详情
+  static async getUser(id: number) {
+    return apiClient.get<User>(`/users/detail/${id}`)
+  }
+
+  // 创建用户
+  static async createUser(user: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) {
+    return apiClient.post<User>('/users/create', user)
   }
 
   // 更新用户信息
   static async updateUser(id: number, user: Partial<User>) {
-    return apiClient.put<User>(`/users/${id}`, user)
+    return apiClient.post<User>('/users/update', { ...user, id })
+  }
+
+  // 删除用户
+  static async deleteUser(id: number) {
+    return apiClient.post<User>('/users/delete', { id })
+  }
+
+  // 批量删除用户
+  static async batchDeleteUsers(ids: number[]) {
+    return apiClient.post<{ deletedCount: number }>('/users/batch-delete', { ids })
   }
 
   // 修改密码
@@ -86,7 +105,11 @@ export const {
   getCurrentUser,
   logout,
   getUsers,
+  getUser,
+  createUser,
   updateUser,
+  deleteUser,
+  batchDeleteUsers,
   changePassword,
   getUserPermissions,
 } = UserApi

@@ -12,12 +12,21 @@ export default defineConfig({
     tailwindcss(),
     viteMockServe({
       mockPath: 'mock',
-      enable: true,
+      enable: false, // 禁用 mock，使用真实 API
     }),
     components({
       resolvers: [AntDesignXVueResolver()],
     }),
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:9999',
+        changeOrigin: true,
+        rewrite: (path) => path,
+      },
+    },
+  },
   optimizeDeps: {
     exclude: ['html-docx-js'],
   },
